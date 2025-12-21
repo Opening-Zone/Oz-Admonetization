@@ -16,20 +16,17 @@ class OzAdmobBannerAd @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : InlineAds(context, attrs, defStyleAttr) {
+) : InlineAds<AdmobBanner>(context, attrs, defStyleAttr) {
 
     companion object {
         private const val TAG = "OzAdmobBannerAd"
     }
 
-    // Map key -> AdmobBanner instance
-    private val bannerAds = ConcurrentHashMap<String, AdmobBanner>()
-
     // Map key -> adUnitId
     private val adUnitIds = ConcurrentHashMap<String, String>()
 
     init {
-        // Set format to BANNER
+        // Set format to BANNER by default for this specific class
         setAdsFormat(AdsFormat.BANNER)
     }
 
@@ -50,122 +47,70 @@ class OzAdmobBannerAd @JvmOverloads constructor(
      */
     fun getAdUnitId(key: String): String? = adUnitIds[key]
 
-    /**
-     * Implementation của onLoadAd từ InlineAds
-     * Load banner ad
-     */
-    override fun onLoadAd(key: String) {
+    override fun createAd(key: String): AdmobBanner? {
         val adUnitId = adUnitIds[key]
         if (adUnitId == null) {
             Log.e(TAG, "Ad unit ID not set for key: $key")
-            onAdLoadFailed(key)
-            return
+            return null
         }
 
+        val listener = object : AdmobBannerListener {
+            override fun onAdLoaded(ad: AdmobBanner) {
+                // Pass the loaded ad object to the parent
+                this@OzAdmobBannerAd.onAdLoaded(key, ad)
+            }
+
+            override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
+                // Notify parent about the failure
+                this@OzAdmobBannerAd.onAdLoadFailed(key, error.message)
+            }
+
+            override fun onAdClicked() {
+                // Can be used for analytics in the future
+            }
+
+            override fun onAdImpression() {
+                // Can be used for analytics in the future
+            }
+        }
+
+        return AdmobBanner(context, adUnitId, listener)
+    }
+
+    override fun onLoadAd(key: String, ad: AdmobBanner) {
         Log.d(TAG, "Loading banner ad for key: $key")
-
-        // Destroy old banner nếu có
-        bannerAds[key]?.destroy()
-
-        // Tạo banner instance mới
-        val banner = AdmobBanner(context, adUnitId)
-        bannerAds[key] = banner
-
-        // Load banner
-        banner.load()
-
-        // Note: onAdLoaded(key) cần được gọi khi banner load thành công
-        // Có thể track qua callback hoặc check state sau một khoảng thời gian
+        ad.load()
     }
 
-    /**
-     * Implementation của onShowAds từ InlineAds
-     * Show banner ad
-     */
-    override fun onShowAds(key: String) {
-        val banner = bannerAds[key]
-        if (banner == null) {
-            Log.e(TAG, "Banner ad not found for key: $key")
-            onAdShowFailed(key)
-            return
-        }
-
-        // Show banner vào chính InlineAds (this là ViewGroup)
-        banner.show(this)
-
-        // Call onAdShown để notify parent
+    override fun onShowAds(key: String, ad: AdmobBanner) {
+        Log.d(TAG, "Showing banner ad for key: $key")
+        // Show banner in this ViewGroup
+        ad.show(this)
+        // Notify parent that the ad has been shown
         onAdShown(key)
-        Log.d(TAG, "Banner ad shown for key: $key")
     }
 
-    /**
-     * Implementation của hideAds từ InlineAds
-     */
     override fun hideAds() {
-        // Remove all child views
+        // Remove all child views to hide the ad
         removeAllViews()
         Log.d(TAG, "Banner ads hidden")
     }
-
-    /**
-     * Implementation của isAdLoaded từ InlineAds
-     * Check banner ad đã loaded chưa
-     */
-    override fun isAdLoaded(key: String): Boolean {
-        // Check if banner exists and was shown (has child views)
-        return bannerAds[key] != null && childCount > 0
+    
+    override fun destroyAd(ad: AdmobBanner) {
+        Log.d(TAG, "Destroying banner ad")
+        ad.destroy()
     }
 
-    /**
-     * Implementation của onDestroyAd từ InlineAds
-     * Destroy banner ad
-     */
-    override fun onDestroyAd(key: String) {
-        Log.d(TAG, "Destroying banner ad for key: $key")
-
-        // Destroy banner
-        bannerAds[key]?.destroy()
-        bannerAds.remove(key)
-
-        // Remove all views
-        removeAllViews()
-    }
-
-    /**
-     * Implementation của onPauseAd từ InlineAds
-     */
     override fun onPauseAd() {
-        // Pause tất cả banner ads
-        bannerAds.values.forEach { it.pause() }
-        Log.d(TAG, "All banner ads paused")
+        Log.d(TAG, "Pausing all banner ads")
+        adStore.values.forEach { it.pause() }
     }
 
-    /**
-     * Implementation của onResumeAd từ InlineAds
-     */
     override fun onResumeAd() {
-        // Resume tất cả banner ads
-        bannerAds.values.forEach { it.resume() }
-        Log.d(TAG, "All banner ads resumed")
-    }
-
-    /**
-     * Override destroy để cleanup tất cả
-     */
-    override fun destroy() {
-        Log.d(TAG, "Destroying all banner ads")
-
-        // Destroy tất cả banner ads
-        bannerAds.values.forEach { it.destroy() }
-        bannerAds.clear()
-
-        // Clear ad unit IDs
-        adUnitIds.clear()
-
-        // Remove all views
-        removeAllViews()
-
-        super.destroy()
+        Log.d(TAG, "Resuming all banner ads")
+        adStore.values.forEach { it.resume() }
     }
 }
+
+
 

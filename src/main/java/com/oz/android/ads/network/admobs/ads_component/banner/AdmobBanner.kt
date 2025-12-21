@@ -1,4 +1,3 @@
-package com.oz.android.ads.network.admobs.ads_component.banner
 
 import android.content.Context
 import android.util.Log
@@ -11,12 +10,23 @@ import com.google.android.gms.ads.LoadAdError
 import com.oz.android.ads.network.admobs.ads_component.IAdmobAds
 
 /**
+ * Listener for Admob Banner ad events.
+ */
+interface AdmobBannerListener {
+    fun onAdLoaded(ad: AdmobBanner)
+    fun onAdFailedToLoad(error: LoadAdError)
+    fun onAdClicked()
+    fun onAdImpression()
+}
+
+/**
  * Class quản lý banner ads từ AdMob
  * Cung cấp 3 phương thức chính: load, show, và loadThenShow
  */
 class AdmobBanner(
     private val context: Context,
-    private val adUnitId: String
+    private val adUnitId: String,
+    private val listener: AdmobBannerListener? = null
 ) : IAdmobAds {
     private var adView: AdView? = null
     private var isLoaded = false
@@ -46,6 +56,7 @@ class AdmobBanner(
                     override fun onAdLoaded() {
                         isLoaded = true
                         Log.d(TAG, "Banner ad loaded successfully")
+                        listener?.onAdLoaded(this@AdmobBanner)
                         
                         // Nếu có container đang chờ, tự động hiển thị
                         pendingContainer?.let { container ->
@@ -57,15 +68,18 @@ class AdmobBanner(
                     override fun onAdFailedToLoad(error: LoadAdError) {
                         isLoaded = false
                         Log.e(TAG, "Banner ad failed to load: ${error.message}")
+                        listener?.onAdFailedToLoad(error)
                         pendingContainer = null
                     }
 
                     override fun onAdClicked() {
                         Log.d(TAG, "Banner ad was clicked")
+                        listener?.onAdClicked()
                     }
 
                     override fun onAdImpression() {
                         Log.d(TAG, "Banner ad recorded an impression")
+                        listener?.onAdImpression()
                     }
                 }
             }
@@ -99,6 +113,12 @@ class AdmobBanner(
             Log.w(TAG, "Ad not loaded yet. It will be shown automatically when loaded")
             pendingContainer = container
             return
+        }
+
+        // Remove parent from the AdView if it has one
+        val parent = currentAdView.parent
+        if (parent is ViewGroup) {
+            parent.removeView(currentAdView)
         }
 
         // Xóa các view cũ trong container

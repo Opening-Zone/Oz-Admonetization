@@ -10,3 +10,4 @@ enum class AdState {
     SHOWING    // Ad đang được hiển thị
 }
 
+

@@ -26,11 +26,11 @@ import com.oz.android.ads.oz_ads.ads_component.OzAds
  * 
  * Các implementation cụ thể sẽ extend class này và implement các abstract methods
  */
-abstract class InlineAds @JvmOverloads constructor(
+abstract class InlineAds<AdType> @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : ViewGroup(context, attrs, defStyleAttr), IOzAds {
+) : OzAds<AdType>() {
 
     companion object {
         private const val TAG = "InlineAds"
@@ -40,7 +40,7 @@ abstract class InlineAds @JvmOverloads constructor(
         private const val DEFAULT_MAX_REFRESH_TIME = 300_000L // 5 minutes
     }
 
-    // Refresh time management (chỉ có trong inline format)
+    // Refresh time management
     private var refreshTime: Long = DEFAULT_REFRESH_TIME
     private var maxRefreshTime: Long = DEFAULT_MAX_REFRESH_TIME
     private var lastRefreshTime: Long = 0
@@ -50,144 +50,36 @@ abstract class InlineAds @JvmOverloads constructor(
     private val refreshHandler = Handler(Looper.getMainLooper())
     private var refreshRunnable: Runnable? = null
 
-    // Ad state
+    // Ad visibility state
     private var isAdVisible = false
 
-    // Delegate để sử dụng logic từ OzAds
-    private val ozAdsDelegate = object : OzAds() {
-        override fun isValidFormat(format: AdsFormat): Boolean {
-            return format == AdsFormat.BANNER || format == AdsFormat.NATIVE
-        }
-
-        override fun getValidFormats(): List<AdsFormat> {
-            return listOf(AdsFormat.BANNER, AdsFormat.NATIVE)
-        }
-
-        override fun hideAds() {
-            this@InlineAds.hideAds()
-        }
-
-        override fun onLoadAd(key: String) {
-            this@InlineAds.onLoadAd(key)
-        }
-
-        override fun onShowAds(key: String) {
-            this@InlineAds.onShowAds(key)
-        }
-
-        override fun onDestroyAd(key: String) {
-            this@InlineAds.onDestroyAd(key)
-        }
-
-        override fun isAdLoaded(): Boolean {
-            // Not used in InlineAds, use isAdLoaded(key) instead
-            return false
-        }
-    }
-
-    init {
-        // Inline ads chỉ hỗ trợ BANNER và NATIVE format
-    }
-
-    /**
-     * Set ads format
-     * Inline ads chỉ hỗ trợ BANNER và NATIVE
-     */
-    fun setAdsFormat(format: AdsFormat) {
-        ozAdsDelegate.setAdsFormat(format)
-    }
-
-    /**
-     * Get ads format hiện tại
-     */
-    fun getAdsFormat(): AdsFormat? = ozAdsDelegate.getAdsFormat()
-
-    /**
-     * Implementation của shouldShowAd() từ IOzAds
-     */
-    override fun shouldShowAd(): Boolean {
-        return ozAdsDelegate.shouldShowAd() && isAdVisible
-    }
-
-    /**
-     * Set trạng thái có nên hiển thị ad hay không
-     */
-    fun setShouldShowAd(shouldShow: Boolean) {
-        ozAdsDelegate.setShouldShowAd(shouldShow)
-        // InlineAds specific: show ad if shouldShow becomes true and ad is loaded
-        if (shouldShow) {
-            preloadKey?.let { key ->
-                if (isAdLoaded(key)) {
-                    showAds(key)
-                }
-            }
-        }
-    }
-
-    /**
-     * Implementation của setPreloadKey() từ IOzAds
-     * Preload ad với key này
-     */
-    override fun setPreloadKey(key: String) {
-        preloadKey = key
-        ozAdsDelegate.setPreloadKey(key)
-    }
-
-    /**
-     * Get state của ad với key
-     * @param key Key để identify ad
-     * @return AdState hiện tại, IDLE nếu chưa có
-     */
-    fun getAdState(key: String): AdState {
-        return ozAdsDelegate.getAdState(key)
-    }
-
-    /**
-     * Get preload key hiện tại
-     */
-    fun getPreloadKey(): String? {
-        // Get from delegate's internal state
-        // Since we can't access private fields, we'll track it ourselves
-        return preloadKey
-    }
-
-    // Track preload key locally for InlineAds specific logic
+    // Track preload key for refresh and visibility logic
     private var preloadKey: String? = null
 
-    /**
-     * Implementation của loadAd() từ IOzAds
-     * Load ad với preload key đã set (nếu có)
-     */
+    override fun isValidFormat(format: AdsFormat): Boolean {
+        return format == AdsFormat.BANNER || format == AdsFormat.NATIVE
+    }
+
+    override fun getValidFormats(): List<AdsFormat> {
+        return listOf(AdsFormat.BANNER, AdsFormat.NATIVE)
+    }
+
+    override fun shouldShowAd(): Boolean {
+        return super.shouldShowAd() && isAdVisible
+    }
+    
+    override fun setPreloadKey(key: String) {
+        this.preloadKey = key
+        super.setPreloadKey(key)
+    }
+
     override fun loadAd() {
         preloadKey?.let { key ->
-            loadAd(key)
+            super.loadAd(key)
         } ?: run {
             Log.w(TAG, "No preload key set. Call setPreloadKey() first or use loadAd(key: String)")
         }
     }
-
-    /**
-     * Load ad với key cụ thể
-     * Delegate to OzAds logic
-     * @param key Key để identify ad cần load
-     */
-    fun loadAd(key: String) {
-        ozAdsDelegate.loadAd(key)
-    }
-
-    /**
-     * Implementation của showAds() từ IOzAds
-     * Delegate to OzAds logic
-     * @param key Key để identify ad cần show (đại diện cho placement)
-     */
-    override fun showAds(key: String) {
-        ozAdsDelegate.showAds(key)
-    }
-
-    /**
-     * Hide ads
-     */
-    protected abstract fun hideAds()
 
     /**
      * Set thời gian refresh ad (milliseconds)
@@ -204,7 +96,6 @@ abstract class InlineAds @JvmOverloads constructor(
 
     /**
      * Set thời gian tối đa để refresh ad (milliseconds)
-     * Sau thời gian này, ad sẽ không tự động refresh nữa
      * @param timeInMillis Thời gian tối đa tính bằng milliseconds
      */
     fun setMaxRefreshTime(timeInMillis: Long) {
@@ -226,59 +117,21 @@ abstract class InlineAds @JvmOverloads constructor(
      * @return Thời gian tối đa tính bằng milliseconds
      */
     fun getMaxRefreshTime(): Long = maxRefreshTime
-
-    /**
-     * Destroy ad và cleanup resources
-     */
-    fun destroy() {
-        cancelAutoRefresh()
-        isAdVisible = false
-        
-        // Delegate to OzAds destroy
-        ozAdsDelegate.destroy()
-    }
-
-    /**
-     * Destroy ad với key cụ thể
-     * Các implementation cụ thể sẽ override method này
-     * @param key Key của ad cần destroy
-     */
-    protected abstract fun onDestroyAd(key: String)
-
-    /**
-     * Abstract method để các implementation cụ thể load ad
-     * @param key Key để identify ad cần load
-     */
-    protected abstract fun onLoadAd(key: String)
-
-    /**
-     * Abstract method để các implementation cụ thể show ad
-     * @param key Key để identify ad cần show
-     */
-    protected abstract fun onShowAds(key: String)
-
-    /**
-     * Kiểm tra xem ad đã được load chưa
-     * Abstract method để các implementation cụ thể implement
-     * @param key Key để identify ad
-     * @return true nếu ad đã load, false nếu chưa
-     */
-    protected abstract fun isAdLoaded(key: String): Boolean
-
+    
     /**
      * Called khi ad được load thành công
      * Các implementation nên gọi method này sau khi load ad thành công
      * @param key Key của ad đã load thành công
+     * @param ad The loaded ad object
      */
-    protected fun onAdLoaded(key: String) {
-        // Delegate to OzAds
-        ozAdsDelegate.onAdLoaded(key)
+    override fun onAdLoaded(key: String, ad: AdType) {
+        super.onAdLoaded(key, ad)
         
-        // Update refresh time tracking (inline specific)
+        // Update refresh time tracking
         lastRefreshTime = System.currentTimeMillis()
         totalRefreshTime = 0
         
-        // Bắt đầu auto refresh nếu chưa vượt quá max refresh time
+        // Start auto refresh if conditions are met
         if (totalRefreshTime < maxRefreshTime && isAdVisible) {
             scheduleNextRefresh()
         }
@@ -288,53 +141,17 @@ abstract class InlineAds @JvmOverloads constructor(
      * Called khi ad load thất bại
      * Các implementation nên gọi method này sau khi load ad thất bại
      * @param key Key của ad đã load thất bại
+     * @param message Failure message
      */
-    protected fun onAdLoadFailed(key: String) {
-        // Delegate to OzAds
-        ozAdsDelegate.onAdLoadFailed(key)
+    override fun onAdLoadFailed(key: String, message: String?) {
+        super.onAdLoadFailed(key, message)
         
-        // Retry sau một khoảng thời gian (inline specific)
+        // Retry after a delay
         if (totalRefreshTime < maxRefreshTime && isAdVisible) {
             scheduleNextRefresh()
         }
     }
-
-    /**
-     * Called khi ad show thành công
-     * Các implementation nên gọi method này sau khi show ad thành công
-     * @param key Key của ad đã show thành công
-     */
-    protected fun onAdShown(key: String) {
-        // Delegate to OzAds
-        ozAdsDelegate.onAdShown(key)
-    }
-
-    /**
-     * Called khi ad dismissed/closed
-     * Các implementation nên gọi method này sau khi ad bị dismiss
-     * @param key Key của ad đã bị dismiss
-     */
-    protected fun onAdDismissed(key: String) {
-        // Delegate to OzAds
-        ozAdsDelegate.onAdDismissed(key)
-    }
-
-    /**
-     * Called khi ad show thất bại
-     * Các implementation nên gọi method này sau khi show ad thất bại
-     * @param key Key của ad đã show thất bại
-     */
-    protected fun onAdShowFailed(key: String) {
-        // Delegate to OzAds
-        ozAdsDelegate.onAdShowFailed(key)
-    }
-
-    /**
-     * Get current showing key
-     * @return Key đang được show, null nếu không có
-     */
-    fun getCurrentShowingKey(): String? = ozAdsDelegate.getCurrentShowingKey()
-
+    
     /**
      * Schedule refresh ad sau một khoảng thời gian
      */
@@ -352,7 +169,6 @@ abstract class InlineAds @JvmOverloads constructor(
 
     /**
      * Refresh ad (load lại ad mới)
-     * Chỉ có trong inline format
      */
     fun refreshAd() {
         val currentTime = System.currentTimeMillis()
@@ -393,7 +209,7 @@ abstract class InlineAds @JvmOverloads constructor(
             refreshRunnable = null
         }
     }
-
+    
     /**
      * Pause ad (gọi trong onPause của Activity/Fragment)
      */
@@ -409,7 +225,7 @@ abstract class InlineAds @JvmOverloads constructor(
     fun resume() {
         isAdVisible = true
         preloadKey?.let { key ->
-            if (shouldShowAd()) {
+            if (super.shouldShowAd()) { // Use super.shouldShowAd to avoid isAdVisible check
                 if (isAdLoaded(key)) {
                     showAds(key)
                 } else {
@@ -430,7 +246,7 @@ abstract class InlineAds @JvmOverloads constructor(
         super.onAttachedToWindow()
         isAdVisible = true
         preloadKey?.let { key ->
-            if (shouldShowAd() && !isAdLoaded(key)) {
+            if (super.shouldShowAd() && !isAdLoaded(key)) {
                 loadAd(key)
             }
         }
@@ -442,6 +258,7 @@ abstract class InlineAds @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         pause()
+        destroy() // Destroy ads when the view is detached
     }
 
     /**
@@ -449,24 +266,24 @@ abstract class InlineAds @JvmOverloads constructor(
      */
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
-        isAdVisible = visibility == VISIBLE
+        val newVisibility = visibility == VISIBLE
+        if (isAdVisible == newVisibility) return
+        isAdVisible = newVisibility
         
-        preloadKey?.let { key ->
-            if (isAdVisible && shouldShowAd()) {
-                if (isAdLoaded(key)) {
-                    showAds(key)
-                } else {
-                    loadAd(key)
-                }
-                if (totalRefreshTime < maxRefreshTime) {
-                    scheduleNextRefresh()
-                }
-            } else {
-                cancelAutoRefresh()
-            }
-        } ?: run {
-            cancelAutoRefresh()
+        if (isAdVisible) {
+            resume()
+        } else {
+            pause()
         }
+    }
+
+    /**
+     * Kiểm tra xem ad đã được load chưa
+     * @param key Key để identify ad
+     * @return true nếu ad đã load, false nếu chưa
+     */
+    protected fun isAdLoaded(key: String): Boolean {
+        return adStore.containsKey(key)
     }
 
     /**
@@ -501,8 +318,7 @@ abstract class InlineAds @JvmOverloads constructor(
         var maxHeight = 0
         var maxWidth = 0
 
-        val count = childCount
-        for (i in 0 until count) {
+        for (i in 0 until childCount) {
             val child = getChildAt(i)
             if (child.visibility != GONE) {
                 measureChild(child, widthMeasureSpec, heightMeasureSpec)
@@ -521,8 +337,7 @@ abstract class InlineAds @JvmOverloads constructor(
      * Override onLayout để layout child views
      */
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        val count = childCount
-        for (i in 0 until count) {
+        for (i in 0 until childCount) {
             val child = getChildAt(i)
             if (child.visibility != GONE) {
                 child.layout(0, 0, child.measuredWidth, child.measuredHeight)
@@ -530,4 +345,3 @@ abstract class InlineAds @JvmOverloads constructor(
         }
     }
 }
-

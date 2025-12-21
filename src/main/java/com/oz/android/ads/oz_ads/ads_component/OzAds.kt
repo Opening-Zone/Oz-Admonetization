@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
  * 
  * Các implementation cụ thể (như AdmobInlineAds, AdmobOverlayAds) sẽ extend class này
  */
-abstract class OzAds : IOzAds {
+abstract class OzAds<AdType> : IOzAds {
 
     companion object {
         private const val TAG = "OzAds"
@@ -28,6 +28,9 @@ abstract class OzAds : IOzAds {
 
     // Preloaded ads state management (key -> state)
     private val adStates = ConcurrentHashMap<String, AdState>()
+    
+    // Ad store (key -> ad object)
+    protected val adStore = ConcurrentHashMap<String, AdType>()
 
     // Pending show callbacks (key -> callback)
     private val pendingShows = ConcurrentHashMap<String, () -> Unit>()
@@ -45,7 +48,7 @@ abstract class OzAds : IOzAds {
         if (!isValidFormat(format)) {
             throw IllegalArgumentException(
                 "Format $format is not valid for ${this::class.simpleName}. " +
-                "Valid formats: ${getValidFormats().joinToString()}"
+                        "Valid formats: ${getValidFormats().joinToString()}"
             )
         }
         
@@ -147,25 +150,23 @@ abstract class OzAds : IOzAds {
         val currentState = getAdState(key)
         
         when (currentState) {
-            AdState.IDLE -> {
-                // Idle: call loadAd() (load from mediation, not recursive)
-                Log.d(TAG, "Loading ad for key: $key (state: IDLE)")
+            AdState.IDLE, AdState.SHOWING -> {
+                if (currentState == AdState.IDLE) Log.d(TAG, "Loading ad for key: $key (state: IDLE)")
+                else Log.d(TAG, "Ad is showing for key: $key, loading a new one")
+
                 setAdState(key, AdState.LOADING)
-                onLoadAd(key)
+                val ad = createAd(key)
+                if (ad == null) {
+                    onAdLoadFailed(key, "Failed to create ad object.")
+                    return
+                }
+                onLoadAd(key, ad)
             }
             AdState.LOADING -> {
-                // Loading: return cause it's loading
                 Log.d(TAG, "Ad already loading for key: $key")
                 return
             }
-            AdState.SHOWING -> {
-                // Showing: load a new one
-                Log.d(TAG, "Ad is showing for key: $key, loading a new one")
-                setAdState(key, AdState.LOADING)
-                onLoadAd(key)
-            }
             AdState.LOADED -> {
-                // Loaded: return because it is loaded
                 Log.d(TAG, "Ad already loaded for key: $key")
                 return
             }
@@ -187,37 +188,54 @@ abstract class OzAds : IOzAds {
         
         when (currentState) {
             AdState.IDLE -> {
-                // Idle: call to loadThenShow() method
                 Log.d(TAG, "Showing ad for key: $key (state: IDLE -> loadThenShow)")
                 setAdState(key, AdState.LOADING)
-                // Set pending show
+                
                 pendingShows[key] = {
-                    setAdState(key, AdState.SHOWING)
-                    currentShowingKey = key
-                    onShowAds(key)
+                    val ad = adStore[key]
+                    if (ad != null) {
+                        setAdState(key, AdState.SHOWING)
+                        currentShowingKey = key
+                        onShowAds(key, ad)
+                    } else {
+                        onAdShowFailed(key, "Ad disappeared after loading.")
+                    }
                 }
-                onLoadAd(key)
+
+                val ad = createAd(key)
+                if (ad == null) {
+                    onAdLoadFailed(key, "Failed to create ad object for loadThenShow.")
+                    return
+                }
+                onLoadAd(key, ad)
             }
             AdState.LOADING -> {
-                // Loading: create a pendingShow that show ads once it done
                 Log.d(TAG, "Ad loading for key: $key, setting pending show")
                 pendingShows[key] = {
-                    setAdState(key, AdState.SHOWING)
-                    currentShowingKey = key
-                    onShowAds(key)
+                    val ad = adStore[key]
+                    if (ad != null) {
+                        setAdState(key, AdState.SHOWING)
+                        currentShowingKey = key
+                        onShowAds(key, ad)
+                    } else {
+                        onAdShowFailed(key, "Ad disappeared after loading.")
+                    }
                 }
             }
             AdState.SHOWING -> {
-                // Showing: return because it is showing
                 Log.d(TAG, "Ad already showing for key: $key")
                 return
             }
             AdState.LOADED -> {
-                // Loaded: call showAd()
                 Log.d(TAG, "Showing ad for key: $key (state: LOADED)")
-                setAdState(key, AdState.SHOWING)
-                currentShowingKey = key
-                onShowAds(key)
+                val ad = adStore[key]
+                if (ad != null) {
+                    setAdState(key, AdState.SHOWING)
+                    currentShowingKey = key
+                    onShowAds(key, ad)
+                } else {
+                    onAdShowFailed(key, "Ad object not found in store.")
+                }
             }
         }
     }
@@ -229,30 +247,48 @@ abstract class OzAds : IOzAds {
     protected abstract fun hideAds()
 
     /**
+     * Create an ad object.
+     * @param key Key to identify the ad.
+     * @return The created ad object or null on failure.
+     */
+    protected abstract fun createAd(key: String): AdType?
+
+    /**
      * Abstract method để các implementation cụ thể load ad từ mediation
      * @param key Key để identify ad cần load
+     * @param ad The ad object to be loaded
      */
-    protected abstract fun onLoadAd(key: String)
+    protected abstract fun onLoadAd(key: String, ad: AdType)
 
     /**
      * Abstract method để các implementation cụ thể show ad
      * @param key Key để identify ad cần show
+     * @param ad The ad object to be shown
      */
-    protected abstract fun onShowAds(key: String)
+    protected abstract fun onShowAds(key: String, ad: AdType)
 
     /**
      * Called khi ad load thành công
      * Các implementation nên gọi method này sau khi load ad thành công
      * @param key Key của ad đã load thành công
+     * @param ad The loaded ad object
      */
-    protected fun onAdLoaded(key: String) {
+    protected fun onAdLoaded(key: String, ad: AdType) {
         val currentState = getAdState(key)
         if (currentState == AdState.LOADING) {
+            // Destroy previous ad if any, to prevent memory leaks
+            adStore[key]?.let { oldAd ->
+                destroyAd(oldAd)
+            }
+            adStore[key] = ad
             setAdState(key, AdState.LOADED)
             Log.d(TAG, "Ad loaded successfully for key: $key")
             
             // Check if there's a pending show
             pendingShows.remove(key)?.invoke()
+        } else {
+            // Loaded ad is not expected, destroy it
+            destroyAd(ad)
         }
     }
 
@@ -260,9 +296,10 @@ abstract class OzAds : IOzAds {
      * Called khi ad load thất bại
      * Các implementation nên gọi method này sau khi load ad thất bại
      * @param key Key của ad đã load thất bại
+     * @param message Failure message
      */
-    protected fun onAdLoadFailed(key: String) {
-        Log.e(TAG, "Ad load failed for key: $key, setting state to IDLE")
+    protected fun onAdLoadFailed(key: String, message: String? = null) {
+        Log.e(TAG, "Ad load failed for key: $key. Reason: ${message ?: "Unknown"}")
         setAdState(key, AdState.IDLE)
         pendingShows.remove(key)
     }
@@ -285,7 +322,7 @@ abstract class OzAds : IOzAds {
     protected fun onAdDismissed(key: String) {
         Log.d(TAG, "Ad dismissed for key: $key, cleaning up")
         
-        // Destroy ad để tránh memory leak
+        // Destroy ad to prevent memory leak
         onDestroyAd(key)
         
         // Reset state
@@ -301,9 +338,10 @@ abstract class OzAds : IOzAds {
      * Called khi ad show thất bại
      * Các implementation nên gọi method này sau khi show ad thất bại
      * @param key Key của ad đã show thất bại
+     * @param message Failure message
      */
-    protected fun onAdShowFailed(key: String) {
-        Log.e(TAG, "Ad show failed for key: $key, setting state to IDLE")
+    protected fun onAdShowFailed(key: String, message: String? = null) {
+        Log.e(TAG, "Ad show failed for key: $key. Reason: ${message ?: "Unknown"}")
         setAdState(key, AdState.IDLE)
         
         // Clear current showing key if it matches
@@ -324,24 +362,33 @@ abstract class OzAds : IOzAds {
 
     /**
      * Destroy ad với key cụ thể
-     * Các implementation cụ thể sẽ override method này
      * @param key Key của ad cần destroy
      */
-    protected abstract fun onDestroyAd(key: String)
+    protected fun onDestroyAd(key: String) {
+        adStore.remove(key)?.let { ad ->
+            destroyAd(ad)
+        }
+    }
+
+    /**
+     * Abstract method to destroy a specific ad object.
+     * @param ad The ad object to destroy
+     */
+    protected abstract fun destroyAd(ad: AdType)
 
     /**
      * Destroy tất cả ads và cleanup resources
-     * Các implementation cụ thể sẽ override method này
      */
-    override fun destroy() {
+    fun destroy() {
         Log.d(TAG, "Destroying all ads")
         
-        // Destroy all ads
-        adStates.keys.forEach { key ->
-            onDestroyAd(key)
+        // Destroy all ads in the store
+        adStore.values.forEach { ad ->
+            destroyAd(ad)
         }
         
         // Clear all states and pending shows
+        adStore.clear()
         adStates.clear()
         pendingShows.clear()
         currentShowingKey = null
