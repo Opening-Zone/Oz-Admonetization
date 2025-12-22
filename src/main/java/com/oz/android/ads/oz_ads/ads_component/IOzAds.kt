@@ -9,7 +9,7 @@ interface IOzAds {
      * Kiểm tra xem có nên hiển thị ad không
      * @return true nếu nên hiển thị, false nếu không
      */
-    fun shouldShowAd(): Boolean
+    fun isAdEnable(): Boolean
 
     /**
      * Set preload key để preload ad

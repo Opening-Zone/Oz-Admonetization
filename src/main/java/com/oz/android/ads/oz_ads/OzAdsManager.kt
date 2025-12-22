@@ -27,8 +27,8 @@ class OzAdsManager private constructor(
     @Volatile
     private var initialized = false
 
-    private val _shouldShowAds = MutableStateFlow(true)
-    val shouldShowAds = _shouldShowAds.asStateFlow()
+    private val _enableAd = MutableStateFlow(false)
+    val enableAd = _enableAd.asStateFlow()
 
     // Ads state management (key -> state)
     private val adStates = ConcurrentHashMap<String, AdState>()
@@ -36,8 +36,8 @@ class OzAdsManager private constructor(
     // Ad store (key -> ad object)
     private val adStore = ConcurrentHashMap<String, Any>()
 
-    fun setShouldShowAds(shouldShow: Boolean) {
-        _shouldShowAds.value = shouldShow
+    fun setEnableAd(shouldShow: Boolean) {
+        _enableAd.value = shouldShow
     }
 
     /**

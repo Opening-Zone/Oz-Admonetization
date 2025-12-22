@@ -38,7 +38,7 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
-            OzAdsManager.getInstance().shouldShowAds.collect { shouldShow ->
+            OzAdsManager.getInstance().enableAd.collect { shouldShow ->
                 if (!shouldShow) {
                     hideAds()
                 }
@@ -80,11 +80,12 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
     protected abstract fun getValidFormats(): List<AdsFormat>
 
     /**
-     * Implementation of shouldShowAd() from the interface
-     * @return true if ad should be shown, false otherwise
+     * Implementation of isAdEnable() from the interface
+     * @return true if ad should be shown or load, false otherwise
      */
-    override fun shouldShowAd(): Boolean {
-        return OzAdsManager.getInstance().shouldShowAds.value
+    override fun isAdEnable(): Boolean {
+        Log.d(TAG, "isAdEnable: " +OzAdsManager.getInstance().enableAd.value)
+        return OzAdsManager.getInstance().enableAd.value
     }
 
     /**
@@ -127,6 +128,11 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
         if (adsFormat == null) {
             Log.w(TAG, "Ads format not set. Call setAdsFormat() first")
             setAdState(key, AdState.IDLE)
+            return
+        }
+
+        if (!isAdEnable()) {
+            Log.d(TAG, "Should not show ad, skipping showAds() for key: $key")
             return
         }
 
@@ -183,7 +189,7 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
             return
         }
 
-        if (!shouldShowAd()) {
+        if (!isAdEnable()) {
             Log.d(TAG, "Should not show ad, skipping showAds() for key: $key")
             setAdState(key, AdState.IDLE)
             return

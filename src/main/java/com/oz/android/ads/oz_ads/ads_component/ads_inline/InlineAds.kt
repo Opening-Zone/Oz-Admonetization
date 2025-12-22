@@ -60,10 +60,6 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
         return listOf(AdsFormat.BANNER, AdsFormat.NATIVE)
     }
 
-    override fun shouldShowAd(): Boolean {
-        return super.shouldShowAd() && isAdVisible
-    }
-
     override fun loadAd() {
         adKey?.let { key ->
             super.loadAd()
@@ -180,7 +176,7 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
     fun resume() {
         isAdVisible = true
         adKey?.let { key ->
-            if (super.shouldShowAd()) { // Use super.shouldShowAd to avoid isAdVisible check
+            if (isAdEnable()) { // Use super.shouldShowAd to avoid isAdVisible check
                 if (isAdLoaded(key)) {
                     showAds(key)
                 } else {
@@ -190,19 +186,6 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
             }
         }
         onResumeAd()
-    }
-
-    /**
-     * Override onAttachedToWindow để tự động load ad khi view được attach
-     */
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        isAdVisible = true
-        adKey?.let { key ->
-            if (super.shouldShowAd() && !isAdLoaded(key)) {
-                loadAd()
-            }
-        }
     }
 
     /**
