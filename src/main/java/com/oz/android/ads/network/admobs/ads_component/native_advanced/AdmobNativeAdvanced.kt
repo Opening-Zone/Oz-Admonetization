@@ -13,7 +13,9 @@ import com.google.android.gms.ads.VideoOptions
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
+import com.oz.android.ads.network.admobs.ads_component.AdmobBase
 import com.oz.android.ads.network.admobs.ads_component.IAdmobAds
+import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,9 +25,11 @@ import kotlinx.coroutines.launch
  * Cung cấp 3 phương thức chính: load, show, và loadThenShow
  */
 class AdmobNativeAdvanced(
-    private val context: Context,
-    private val adUnitId: String
-) : IAdmobAds {
+    context: Context,
+    adUnitId: String,
+    listener: OzAdmobListener<AdmobNativeAdvanced>? = null
+) : AdmobBase<AdmobNativeAdvanced>(context, adUnitId, listener), IAdmobAds {
+
     private var currentNativeAd: NativeAd? = null
     private var isLoaded = false
     private var adIsLoading = false
@@ -45,6 +49,9 @@ class AdmobNativeAdvanced(
         // Request a new ad if one isn't already loaded or loading
         if (adIsLoading || currentNativeAd != null) {
             Log.d(TAG, "Ad already loading or loaded")
+            if (currentNativeAd != null) {
+                listener?.onAdLoaded(this)
+            }
             return
         }
 
@@ -77,6 +84,9 @@ class AdmobNativeAdvanced(
                 adIsLoading = false
 
                 Log.d(TAG, "Native ad loaded successfully")
+
+                // Notify listener
+                listener?.onAdLoaded(this@AdmobNativeAdvanced)
 
                 // Call callback if provided
                 onAdLoadedCallback?.invoke(nativeAd)
@@ -112,6 +122,18 @@ class AdmobNativeAdvanced(
                             adIsLoading = false
                             pendingContainer = null
                             pendingNativeAdView = null
+
+                            listener?.onAdFailedToLoad(loadAdError)
+                        }
+
+                        override fun onAdClicked() {
+                            Log.d(TAG, "Native ad was clicked")
+                            listener?.onAdClicked()
+                        }
+
+                        override fun onAdImpression() {
+                            Log.d(TAG, "Native ad recorded an impression")
+                            listener?.onAdImpression()
                         }
                     }
                 )
@@ -166,6 +188,10 @@ class AdmobNativeAdvanced(
         container.removeAllViews()
 
         // Thêm NativeAdView vào container
+        // Ensure nativeAdView doesn't have a parent
+        if (nativeAdView.parent != null) {
+            (nativeAdView.parent as ViewGroup).removeView(nativeAdView)
+        }
         container.addView(nativeAdView)
         Log.d(TAG, "Native ad displayed in container")
     }
@@ -307,16 +333,17 @@ class AdmobNativeAdvanced(
         return currentNativeAd
     }
 
+
     /**
-     * Destroy native ad (gọi trong onDestroy của Activity/Fragment)
+     * Destroy quảng cáo (gọi trong onDestroy của Activity/Fragment)
      */
     fun destroy() {
         currentNativeAd?.destroy()
         currentNativeAd = null
         isLoaded = false
+        adIsLoading = false
         pendingContainer = null
         pendingNativeAdView = null
-        onAdLoadedCallback = null
+        Log.d(TAG, "Native ad destroyed")
     }
 }
-
