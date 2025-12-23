@@ -39,7 +39,7 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
         private const val TAG = "InlineAds"
 
         // Default refresh times (in milliseconds)
-        private const val DEFAULT_REFRESH_TIME = 30_000L // 30 seconds
+        private const val DEFAULT_REFRESH_TIME = 0L //default is turned off
     }
 
     // Refresh time management
@@ -120,6 +120,8 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
      */
     private fun scheduleNextRefresh() {
         cancelAutoRefresh()
+
+        if (refreshTime <= 0) return
 
         refreshRunnable = Runnable {
             if (isAdVisible) {

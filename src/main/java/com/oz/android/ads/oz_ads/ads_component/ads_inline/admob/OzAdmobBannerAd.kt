@@ -7,7 +7,6 @@ import com.google.android.gms.ads.LoadAdError
 import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 import com.oz.android.ads.oz_ads.ads_component.AdsFormat
 import com.oz.android.ads.oz_ads.ads_component.ads_inline.InlineAds
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Implementation cụ thể của InlineAds cho AdMob Banner
