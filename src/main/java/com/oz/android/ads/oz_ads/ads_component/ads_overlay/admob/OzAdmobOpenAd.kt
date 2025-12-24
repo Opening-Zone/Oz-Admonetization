@@ -2,6 +2,7 @@ package com.oz.android.ads.oz_ads.ads_component.ads_overlay.admob
 
 import android.app.Activity
 import android.content.Context
+import android.util.AttributeSet
 import android.util.Log
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
@@ -17,8 +18,10 @@ import java.util.concurrent.ConcurrentHashMap
  * All business logic (state management, load/show flow) is handled by OzAds/OverlayAds.
  */
 class OzAdmobOpenAd @JvmOverloads constructor(
-    context: Context
-) : OverlayAds<AdmobAppOpen>(context) {
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : OverlayAds<AdmobAppOpen>(context, attrs, defStyleAttr) {
 
     companion object {
         private const val TAG = "OzAdmobOpenAd"

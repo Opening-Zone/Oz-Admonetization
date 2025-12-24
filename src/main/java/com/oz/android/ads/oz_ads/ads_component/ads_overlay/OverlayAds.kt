@@ -3,6 +3,7 @@ package com.oz.android.ads.oz_ads.ads_component.ads_overlay
 import android.app.Activity
 import android.app.Dialog
 import android.content.Context
+import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -20,8 +21,10 @@ import com.oz.android.ads.oz_ads.ads_component.OzAds
  * Implements logic for time gaps between ad displays
  */
 abstract class OverlayAds<AdType> @JvmOverloads constructor(
-    context: Context
-) : OzAds<AdType>(context) {
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : OzAds<AdType>(context, attrs, defStyleAttr) {
 
     companion object {
         private const val TAG = "AdsOverlayManager"

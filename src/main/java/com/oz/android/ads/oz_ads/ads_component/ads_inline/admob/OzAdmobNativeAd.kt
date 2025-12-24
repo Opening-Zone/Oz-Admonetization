@@ -1,6 +1,7 @@
 package com.oz.android.ads.oz_ads.ads_component.ads_inline.admob
 
 import android.content.Context
+import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
 import com.google.android.gms.ads.LoadAdError
@@ -14,7 +15,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 class OzAdmobNativeAd @JvmOverloads constructor(
     context: Context,
-) : InlineAds<AdmobNativeAdvanced>(context) {
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : InlineAds<AdmobNativeAdvanced>(context, attrs, defStyleAttr) {
 
     companion object {
         private const val TAG = "OzAdmobNativeAd"

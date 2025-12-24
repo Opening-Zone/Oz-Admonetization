@@ -1,6 +1,7 @@
 package com.oz.android.ads.oz_ads.ads_component
 
 import android.content.Context
+import android.util.AttributeSet
 import android.util.Log
 import android.view.ViewGroup
 import androidx.lifecycle.findViewTreeLifecycleOwner
@@ -19,7 +20,12 @@ import java.util.concurrent.ConcurrentHashMap
  * Các implementation cụ thể (như AdmobInlineAds, AdmobOverlayAds) sẽ extend class này
  */
 abstract class OzAds<AdType> : IOzAds, ViewGroup {
-    constructor(context: Context?) : super(context)
+    @JvmOverloads
+    constructor(
+        context: Context?,
+        attrs: AttributeSet? = null,
+        defStyleAttr: Int = 0
+    ) : super(context, attrs, defStyleAttr)
 
     companion object {
         private const val TAG = "OzAds"

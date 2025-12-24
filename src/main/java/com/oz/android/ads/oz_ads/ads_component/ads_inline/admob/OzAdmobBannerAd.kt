@@ -2,6 +2,7 @@ package com.oz.android.ads.oz_ads.ads_component.ads_inline.admob
 
 import AdmobBanner
 import android.content.Context
+import android.util.AttributeSet
 import android.util.Log
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.LoadAdError
@@ -15,7 +16,9 @@ import com.oz.android.ads.oz_ads.ads_component.ads_inline.InlineAds
  */
 class OzAdmobBannerAd @JvmOverloads constructor(
     context: Context,
-) : InlineAds<AdmobBanner>(context) {
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : InlineAds<AdmobBanner>(context, attrs, defStyleAttr) {
 
     private var banner:AdmobBanner = AdmobBanner(context, "", null)
 

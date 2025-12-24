@@ -3,6 +3,7 @@ package com.oz.android.ads.oz_ads.ads_component.ads_inline
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -26,8 +27,10 @@ import io.github.usefulness.shimmer.android.ShimmerFrameLayout
  * Các implementation cụ thể sẽ extend class này và implement các abstract methods
  */
 abstract class InlineAds<AdType> @JvmOverloads constructor(
-    context: Context
-) : OzAds<AdType>(context) {
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : OzAds<AdType>(context, attrs, defStyleAttr) {
     /**
      * Abstract method để các implementation xử lý pause ad
      */
