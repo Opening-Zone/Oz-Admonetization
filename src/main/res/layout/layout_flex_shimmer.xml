@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/white">
+
+    <!-- 1. App Icon Placeholder -->
+    <View
+        android:id="@+id/shimmer_icon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@drawable/rounded_tl12_br12"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 2. Headline Placeholder (Title) -->
+    <View
+        android:id="@+id/shimmer_headline"
+        android:layout_width="0dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/rounded_tl12_br12"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/shimmer_icon"
+        app:layout_constraintTop_toTopOf="@id/shimmer_icon" />
+
+    <!-- 3. Sub-text Placeholder (Advertiser / Rating) -->
+    <View
+        android:id="@+id/shimmer_subtext"
+        android:layout_width="120dp"
+        android:layout_height="12dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/rounded_tl12_br12"
+        app:layout_constraintBottom_toBottomOf="@+id/shimmer_icon"
+        app:layout_constraintStart_toStartOf="@id/shimmer_headline"
+        app:layout_constraintTop_toBottomOf="@id/shimmer_headline" />
+
+    <View
+        android:id="@+id/shimmer_subtext_2"
+        android:layout_width="0dp"
+        android:layout_height="12dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/rounded_tl12_br12"
+        app:layout_constraintBottom_toBottomOf="@+id/shimmer_icon"
+        app:layout_constraintEnd_toEndOf="@+id/shimmer_headline"
+        app:layout_constraintStart_toEndOf="@+id/shimmer_subtext"
+        app:layout_constraintTop_toBottomOf="@id/shimmer_headline" />
+
+    <!-- 4. Body Text Placeholder (Description) -->
+    <View
+        android:id="@+id/shimmer_body"
+        android:layout_width="0dp"
+        android:layout_height="12dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/rounded_tl12_br12"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/shimmer_icon" />
+
+    <View
+        android:id="@+id/shimmer_body_line2"
+        android:layout_width="200dp"
+        android:layout_height="12dp"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/rounded_8"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/shimmer_body" />
+
+    <!-- 5. Media View Placeholder (The Big Image/Video) -->
+    <!-- dimensionRatio 1.91:1 is standard for Facebook/AdMob MediaViews -->
+    <View
+        android:id="@+id/shimmer_media"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_tl12_br12"
+        app:layout_constraintDimensionRatio="1.91:1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/shimmer_body_line2" />
+
+    <!-- 6. Call To Action Button Placeholder -->
+    <View
+        android:id="@+id/shimmer_cta"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_tl12_br12"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/shimmer_media" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:gravity="center"
+        android:minWidth="8dp"
+        android:minHeight="8dp"
+        android:paddingStart="3.0dip"
+        android:paddingEnd="6.0dip"
+        android:text="Ad"
+        android:background="@drawable/rounded_tl12_br12"
+        android:backgroundTint="#ffffff"
+        android:textColor="@color/shimmer_default_background"
+        android:textSize="16sp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

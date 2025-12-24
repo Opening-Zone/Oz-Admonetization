@@ -1,7 +1,6 @@
 package com.oz.android.ads.oz_ads.ads_component.ads_inline
 
 import android.content.Context
-import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -9,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import com.oz.android.ads.R
 import com.oz.android.ads.oz_ads.OzAdsManager
 import com.oz.android.ads.oz_ads.ads_component.AdsFormat
 import com.oz.android.ads.oz_ads.ads_component.OzAds
@@ -66,36 +66,18 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
         shimmerLayout = ShimmerFrameLayout(context)
         shimmerLayout?.layoutParams = LayoutParams(MATCH_PARENT, MATCH_PARENT)
 
-        // Add a placeholder view inside shimmer to make it visible
-        val placeholder = View(context)
-        placeholder.layoutParams = LayoutParams(MATCH_PARENT, MATCH_PARENT)
-        placeholder.setBackgroundColor(Color.LTGRAY)
-        shimmerLayout?.addView(placeholder)
+        // Get the resource ID from the child class
+        val shimmerResId = R.layout.layout_flex_shimmer
 
-        shimmerLayout?.visibility = View.GONE
-        addView(shimmerLayout)
-    }
-
-    /**
-     * Set shimmer view layout resource
-     * @param layoutResId Layout resource ID for shimmer content
-     */
-    fun setShimmerLayoutResource(layoutResId: Int) {
-        shimmerLayout?.let { layout ->
-            layout.removeAllViews()
-            LayoutInflater.from(context).inflate(layoutResId, layout, true)
+        if (shimmerResId != 0) {
+            // Inflate the XML layout into the ShimmerFrameLayout
+            LayoutInflater.from(context).inflate(shimmerResId, shimmerLayout, true)
+        } else {
+            Log.w(TAG, "Shimmer layout resource ID is 0. Shimmer might not appear.")
         }
-    }
 
-    /**
-     * Set shimmer height in dp
-     * @param heightDp Height in dp
-     */
-    fun setShimmerHeight(heightDp: Float) {
-        val density = context.resources.displayMetrics.density
-        val heightPx = (heightDp * density).toInt()
-        shimmerLayout?.layoutParams?.height = heightPx
-        shimmerLayout?.requestLayout()
+        shimmerLayout?.visibility = GONE
+        addView(shimmerLayout)
     }
 
     override fun onAdShown(key: String) {

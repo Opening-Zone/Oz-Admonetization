@@ -51,7 +51,7 @@ android {
         implementation(libs.play.services.ads)
         implementation(libs.user.messaging.platform)
         implementation(libs.shimmer.android.core)
-
+        implementation(libs.androidx.constraintlayout)
         testImplementation(libs.junit)
         androidTestImplementation(libs.androidx.junit)
         androidTestImplementation(libs.androidx.espresso.core)
