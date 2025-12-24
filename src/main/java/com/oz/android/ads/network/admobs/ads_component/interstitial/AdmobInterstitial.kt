@@ -9,16 +9,19 @@ import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-import com.oz.android.ads.network.admobs.ads_component.IAdmobAds
+import com.oz.android.ads.network.admobs.ads_component.AdmobBase
+import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 
 /**
  * Class quản lý interstitial ads từ AdMob
  * Cung cấp 3 phương thức chính: load, show, và loadThenShow
  */
 class AdmobInterstitial(
-    private val context: Context,
-    private val adUnitId: String
-) : IAdmobAds {
+    context: Context,
+    adUnitId: String,
+    listener: OzAdmobListener<AdmobInterstitial>? = null
+) : AdmobBase<AdmobInterstitial>(context, adUnitId, listener) {
+
     private var interstitialAd: InterstitialAd? = null
     private var isLoaded = false
     private var adIsLoading = false
@@ -52,6 +55,8 @@ class AdmobInterstitial(
                     isLoaded = true
                     adIsLoading = false
 
+                    listener?.onAdLoaded(this@AdmobInterstitial)
+
                     // Setup FullScreenContentCallback
                     setupFullScreenContentCallback(ad)
 
@@ -68,6 +73,8 @@ class AdmobInterstitial(
                     isLoaded = false
                     adIsLoading = false
                     pendingActivity = null
+                    
+                    listener?.onAdFailedToLoad(adError)
                 }
             }
         )
@@ -109,7 +116,11 @@ class AdmobInterstitial(
      * Lưu ý: Interstitial cần Activity, sử dụng loadThenShow(activity: Activity) thay vì method này
      */
     override fun loadThenShow() {
-        Log.w(TAG, "loadThenShow() called without activity. Use loadThenShow(activity: Activity) for interstitial ads")
+        if (pendingActivity != null) {
+            loadThenShow(pendingActivity!!)
+        } else {
+            Log.w(TAG, "loadThenShow() called without activity. Use loadThenShow(activity: Activity) for interstitial ads")
+        }
     }
 
     /**
@@ -152,11 +163,13 @@ class AdmobInterstitial(
             override fun onAdImpression() {
                 // Called when an impression is recorded for an ad.
                 Log.d(TAG, "Ad recorded an impression")
+                listener?.onAdImpression()
             }
 
             override fun onAdClicked() {
                 // Called when ad is clicked.
                 Log.d(TAG, "Ad was clicked")
+                listener?.onAdClicked()
             }
         }
     }
@@ -169,5 +182,3 @@ class AdmobInterstitial(
         return isLoaded && interstitialAd != null
     }
 }
-
-

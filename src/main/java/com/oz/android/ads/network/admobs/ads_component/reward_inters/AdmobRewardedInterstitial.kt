@@ -1,4 +1,4 @@
-package com.oz.android.ads.network.admobs.ads_component.reward
+package com.oz.android.ads.network.admobs.ads_component.reward_inters
 
 import android.app.Activity
 import android.content.Context
@@ -10,16 +10,18 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback
-import com.oz.android.ads.network.admobs.ads_component.IAdmobAds
+import com.oz.android.ads.network.admobs.ads_component.AdmobBase
+import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 
 /**
  * Class quản lý rewarded interstitial ads từ AdMob
  * Cung cấp 3 phương thức chính: load, show, và loadThenShow
  */
 class AdmobRewardedInterstitial(
-    private val context: Context,
-    private val adUnitId: String
-) : IAdmobAds {
+    context: Context,
+    adUnitId: String,
+    listener: OzAdmobListener<AdmobRewardedInterstitial>
+) : AdmobBase<AdmobRewardedInterstitial>(context, adUnitId, listener) {
     private var rewardedInterstitialAd: RewardedInterstitialAd? = null
     private var isLoaded = false
     private var adIsLoading = false
@@ -84,7 +86,10 @@ class AdmobRewardedInterstitial(
      * Lưu ý: Reward interstitial ad cần Activity và callback, sử dụng show(activity, callback) thay vì method này
      */
     override fun show() {
-        Log.w(TAG, "show() called without activity and callback. Use show(activity: Activity, callback: (RewardItem) -> Unit) for rewarded interstitial ads")
+        Log.w(
+            TAG,
+            "show() called without activity and callback. Use show(activity: Activity, callback: (RewardItem) -> Unit) for rewarded interstitial ads"
+        )
     }
 
     /**
@@ -121,7 +126,10 @@ class AdmobRewardedInterstitial(
      * Lưu ý: Reward interstitial ad cần Activity và callback, sử dụng loadThenShow(activity, callback) thay vì method này
      */
     override fun loadThenShow() {
-        Log.w(TAG, "loadThenShow() called without activity and callback. Use loadThenShow(activity: Activity, callback: (RewardItem) -> Unit) for rewarded interstitial ads")
+        Log.w(
+            TAG,
+            "loadThenShow() called without activity and callback. Use loadThenShow(activity: Activity, callback: (RewardItem) -> Unit) for rewarded interstitial ads"
+        )
     }
 
     /**

@@ -10,17 +10,18 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.OnUserEarnedRewardListener
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
-import com.google.android.gms.ads.rewarded.RewardItem
-import com.oz.android.ads.network.admobs.ads_component.IAdmobAds
+import com.oz.android.ads.network.admobs.ads_component.AdmobBase
+import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 
 /**
  * Class quản lý rewarded video ads từ AdMob
  * Cung cấp 3 phương thức chính: load, show, và loadThenShow
  */
 class AdmobReward(
-    private val context: Context,
-    private val adUnitId: String
-) : IAdmobAds {
+    context: Context,
+    adUnitId: String,
+    listener: OzAdmobListener<AdmobReward>? = null
+) : AdmobBase<AdmobReward>(context, adUnitId, listener) {
     private var rewardedAd: RewardedAd? = null
     private var isLoaded = false
     private var adIsLoading = false
@@ -85,7 +86,10 @@ class AdmobReward(
      * Lưu ý: Reward ad cần Activity và callback, sử dụng show(activity, callback) thay vì method này
      */
     override fun show() {
-        Log.w(TAG, "show() called without activity and callback. Use show(activity: Activity, callback: OnUserEarnedRewardListener) for reward ads")
+        Log.w(
+            TAG,
+            "show() called without activity and callback. Use show(activity: Activity, callback: OnUserEarnedRewardListener) for reward ads"
+        )
     }
 
     /**
@@ -119,7 +123,10 @@ class AdmobReward(
      * Lưu ý: Reward ad cần Activity và callback, sử dụng loadThenShow(activity, callback) thay vì method này
      */
     override fun loadThenShow() {
-        Log.w(TAG, "loadThenShow() called without activity and callback. Use loadThenShow(activity: Activity, callback: OnUserEarnedRewardListener) for reward ads")
+        Log.w(
+            TAG,
+            "loadThenShow() called without activity and callback. Use loadThenShow(activity: Activity, callback: OnUserEarnedRewardListener) for reward ads"
+        )
     }
 
     /**

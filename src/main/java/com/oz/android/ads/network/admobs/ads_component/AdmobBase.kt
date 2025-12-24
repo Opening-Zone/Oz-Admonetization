@@ -19,6 +19,12 @@ abstract class AdmobBase<AdType>(
     /**
      * Abstract Show method.
      * Note: Subclasses can overload this (e.g., show(container)).
+     * Hiển thị quảng cáo
+     * Tùy loại ad mà có thể cần tham số khác nhau:
+     * - Banner: show(container: ViewGroup)
+     * - Interstitial: show() hoặc show(activity: Activity)
+     * - Reward: show(activity: Activity, callback)
+     * - Native: show(container: ViewGroup)
      */
     abstract fun show()
 

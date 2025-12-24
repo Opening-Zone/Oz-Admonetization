@@ -14,7 +14,6 @@ import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
 import com.oz.android.ads.network.admobs.ads_component.AdmobBase
-import com.oz.android.ads.network.admobs.ads_component.IAdmobAds
 import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +27,7 @@ class AdmobNativeAdvanced(
     context: Context,
     adUnitId: String,
     listener: OzAdmobListener<AdmobNativeAdvanced>? = null
-) : AdmobBase<AdmobNativeAdvanced>(context, adUnitId, listener), IAdmobAds {
+) : AdmobBase<AdmobNativeAdvanced>(context, adUnitId, listener){
 
     private var currentNativeAd: NativeAd? = null
     private var isLoaded = false
