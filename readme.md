@@ -1,4 +1,11 @@
-[android, kotlin, jetpackcompose, admob]
+![logo](./docs/img/koin_main_logo.png)
+
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.21-blue.svg?style=flat&logo=kotlin)](https://kotlinlang.org)
+![Github Actions](https://github.com/InsertKoinIO/koin/actions/workflows/build.yml/badge.svg)
+[![Apache 2 License](https://img.shields.io/github/license/InsertKoinIO/koin)](https://github.com/InsertKoinIO/koin/blob/main/LICENSE.txt)
+[![Slack channel](https://img.shields.io/badge/Chat-Slack-orange.svg?style=flat&logo=slack)](https://kotlinlang.slack.com/messages/koin/)
+
+[![Free Monitoring](https://img.shields.io/badge/Kotzilla.io-Free%20Monitoring-brightgreen?style=flat&logo=kotlin&logoColor=white)]([https://forms.gle/YOUR-FORM-ID](https://bit.ly/koin_opensource_monitoring))
 
 # OzAds Wrapper
 
