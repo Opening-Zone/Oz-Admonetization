@@ -10,6 +10,28 @@
 This module provides easy-to-use wrappers for integrating AdMob ads into your Android application. It supports Banner, Native, Interstitial, and App Open ads, compatible with both Android View System (XML) and Jetpack Compose.
 
 ## Setup
+
+### 1. Configure AdMob App ID
+If you are using AdMob, you **must** update your `AndroidManifest.xml` with your AdMob App ID. Failure to add this tag may result in a crash on app launch.
+
+Add the `<meta-data>` tag inside your `<application>` element:
+
+```xml
+<manifest>
+    <application>
+        <!-- ... other configuration ... -->
+
+        <!-- Replace "YOUR_ADMOB_APP_ID" with your actual AdMob App ID -->
+        <!-- Example Test ID: ca-app-pub-3940256099942544~3347511713 -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="YOUR_ADMOB_APP_ID"/>
+            
+    </application>
+</manifest>
+```
+
+### 2. Configure OzAdsManager
 Initialize the `OzAdsManager` in your Application class or main Activity before using any ad components.
 
 ```kotlin
