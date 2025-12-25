@@ -1,5 +1,6 @@
 package com.oz.android.ads.oz_ads.ads_component.ads_inline.admob
 
+import AdmobBanner
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
@@ -8,9 +9,10 @@ import androidx.annotation.RestrictTo
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAdView
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.wrapper.OzAdListener
 import com.oz.android.ads.network.admobs.ads_component.native_advanced.AdmobNativeAdvanced
 import com.oz.android.ads.oz_ads.ads_component.ads_inline.InlineAds
+import com.oz.android.wrapper.OzAdError
 import java.util.concurrent.ConcurrentHashMap
 
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -78,12 +80,12 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
             return null
         }
 
-        val listener = object : OzAdmobListener<AdmobNativeAdvanced>() {
+        val nativeListener = object : OzAdListener<AdmobNativeAdvanced>() {
             override fun onAdLoaded(ad: AdmobNativeAdvanced) {
                 this@OzAdmobNativeAd.onAdLoaded(key, ad)
             }
 
-            override fun onAdFailedToLoad(error: LoadAdError) {
+            override fun onAdFailedToLoad(error: OzAdError) {
                 this@OzAdmobNativeAd.onAdLoadFailed(key, error.message)
             }
 
@@ -92,7 +94,9 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
             }
         }
 
-        return AdmobNativeAdvanced(context, adUnitId, listener)
+        val mergedListener = nativeListener.merge(listener)
+
+        return AdmobNativeAdvanced(context, adUnitId, mergedListener)
     }
 
     override fun onLoadAd(key: String, ad: AdmobNativeAdvanced) {

@@ -7,9 +7,10 @@ import android.util.Log
 import androidx.annotation.RestrictTo
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.wrapper.OzAdListener
 import com.oz.android.ads.network.admobs.ads_component.app_open.AdmobAppOpen
 import com.oz.android.ads.oz_ads.ads_component.ads_overlay.OverlayAds
+import com.oz.android.wrapper.OzAdError
 
 /**
  * Implementation of OverlayAds for AdMob App Open ads.
@@ -22,7 +23,7 @@ import com.oz.android.ads.oz_ads.ads_component.ads_overlay.OverlayAds
 open class OzAdmobOpenAd @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
+    defStyleAttr: Int = 0,
 ) : OverlayAds<AdmobAppOpen>(context, attrs, defStyleAttr) {
 
     companion object {
@@ -96,13 +97,13 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
         }
 
         // Create listener that bridges AdmobAppOpen callbacks to OzAds callbacks
-        val listener = object : OzAdmobListener<AdmobAppOpen>() {
+        val openListener = object : OzAdListener<AdmobAppOpen>() {
             override fun onAdLoaded(ad: AdmobAppOpen) {
                 // Bridge to OzAds.onAdLoaded() - handles state management
                 this@OzAdmobOpenAd.onAdLoaded(key, ad)
             }
 
-            override fun onAdFailedToLoad(error: LoadAdError) {
+            override fun onAdFailedToLoad(error: OzAdError) {
                 // Bridge to OzAds.onAdLoadFailed() - handles state management
                 this@OzAdmobOpenAd.onAdLoadFailed(key, error.message)
             }
@@ -117,9 +118,9 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
                 this@OzAdmobOpenAd.onAdDismissed(key)
             }
 
-            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+            override fun onAdFailedToShowFullScreenContent(error: OzAdError) {
                 // Bridge to OzAds.onAdShowFailed() - handles state management
-                this@OzAdmobOpenAd.onAdShowFailed(key, adError.message)
+                this@OzAdmobOpenAd.onAdShowFailed(key, error.message)
             }
 
             override fun onAdClicked() {
@@ -128,7 +129,9 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
             }
         }
 
-        return AdmobAppOpen(context, adUnitId, listener)
+        val mergedListener = openListener.merge(listener)
+
+        return AdmobAppOpen(context, adUnitId, mergedListener)
     }
 
     /**

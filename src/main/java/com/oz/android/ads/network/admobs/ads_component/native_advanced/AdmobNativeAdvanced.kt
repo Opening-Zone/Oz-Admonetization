@@ -15,7 +15,8 @@ import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
 import com.oz.android.ads.network.admobs.ads_component.AdmobBase
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.ads.network.admobs.ads_component.toOzError
+import com.oz.android.wrapper.OzAdListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,7 +29,7 @@ import kotlinx.coroutines.launch
 class AdmobNativeAdvanced(
     context: Context,
     adUnitId: String,
-    listener: OzAdmobListener<AdmobNativeAdvanced>? = null
+    listener: OzAdListener<AdmobNativeAdvanced>? = null
 ) : AdmobBase<AdmobNativeAdvanced>(context, adUnitId, listener){
 
     private var currentNativeAd: NativeAd? = null
@@ -124,7 +125,7 @@ class AdmobNativeAdvanced(
                             pendingContainer = null
                             pendingNativeAdView = null
 
-                            listener?.onAdFailedToLoad(loadAdError)
+                            listener?.onAdFailedToLoad(loadAdError.toOzError())
                         }
 
                         override fun onAdClicked() {

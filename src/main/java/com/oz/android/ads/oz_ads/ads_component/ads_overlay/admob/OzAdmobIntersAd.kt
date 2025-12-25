@@ -7,9 +7,10 @@ import android.util.Log
 import androidx.annotation.RestrictTo
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.LoadAdError
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.wrapper.OzAdListener
 import com.oz.android.ads.network.admobs.ads_component.interstitial.AdmobInterstitial
 import com.oz.android.ads.oz_ads.ads_component.ads_overlay.OverlayAds
+import com.oz.android.wrapper.OzAdError
 
 /**
  * Implementation of OverlayAds for AdMob Interstitial ads.
@@ -96,13 +97,13 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
         }
 
         // Create listener that bridges AdmobInterstitial callbacks to OzAds callbacks
-        val listener = object : OzAdmobListener<AdmobInterstitial>() {
+        val intersListener = object : OzAdListener<AdmobInterstitial>() {
             override fun onAdLoaded(ad: AdmobInterstitial) {
                 // Bridge to OzAds.onAdLoaded() - handles state management
                 this@OzAdmobIntersAd.onAdLoaded(key, ad)
             }
 
-            override fun onAdFailedToLoad(error: LoadAdError) {
+            override fun onAdFailedToLoad(error: OzAdError) {
                 // Bridge to OzAds.onAdLoadFailed() - handles state management
                 this@OzAdmobIntersAd.onAdLoadFailed(key, error.message)
             }
@@ -117,7 +118,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
                 this@OzAdmobIntersAd.onAdDismissed(key)
             }
 
-            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+            override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
                 // Bridge to OzAds.onAdShowFailed() - handles state management
                 this@OzAdmobIntersAd.onAdShowFailed(key, adError.message)
             }
@@ -128,7 +129,9 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
             }
         }
 
-        return AdmobInterstitial(context, adUnitId, listener)
+        val mergedListener = intersListener.merge(listener)
+
+        return AdmobInterstitial(context, adUnitId, mergedListener)
     }
 
     /**

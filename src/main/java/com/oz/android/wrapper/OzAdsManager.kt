@@ -1,4 +1,4 @@
-package com.oz.android.ads.oz_ads
+package com.oz.android.wrapper
 
 import android.app.Activity
 import com.google.android.gms.ads.MobileAds

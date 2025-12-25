@@ -11,7 +11,8 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.oz.android.ads.network.admobs.ads_component.AdmobBase
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.ads.network.admobs.ads_component.toOzError
+import com.oz.android.wrapper.OzAdListener
 
 /**
  * Class quản lý interstitial ads từ AdMob
@@ -21,7 +22,7 @@ import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 class AdmobInterstitial(
     context: Context,
     adUnitId: String,
-    listener: OzAdmobListener<AdmobInterstitial>? = null
+    listener: OzAdListener<AdmobInterstitial>? = null
 ) : AdmobBase<AdmobInterstitial>(context, adUnitId, listener) {
 
     private var interstitialAd: InterstitialAd? = null
@@ -76,7 +77,7 @@ class AdmobInterstitial(
                     adIsLoading = false
                     pendingActivity = null
                     
-                    listener?.onAdFailedToLoad(adError)
+                    listener?.onAdFailedToLoad(adError.toOzError())
                 }
             }
         )
@@ -156,7 +157,7 @@ class AdmobInterstitial(
                 // don't show the ad a second time.
                 interstitialAd = null
                 isLoaded = false
-                listener?.onAdFailedToShowFullScreenContent(adError)
+                listener?.onAdFailedToShowFullScreenContent(adError.toOzError())
             }
 
             override fun onAdShowedFullScreenContent() {

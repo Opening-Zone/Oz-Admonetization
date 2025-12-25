@@ -57,7 +57,7 @@ class OzAdmobBannerAd(context: Context) : InlineAds<AdmobBanner>(context) {
     override fun createAd(key: String): AdmobBanner? {
         val adUnitId = getAdUnitId(key)
         // Create AdmobBanner with a listener that bridges back to OzAds events
-        return AdmobBanner(context, adUnitId, object : OzAdmobListener<AdmobBanner>() {
+        return AdmobBanner(context, adUnitId, object : OzAdListener<AdmobBanner>() {
             override fun onAdLoaded(ad: AdmobBanner) {
                 this@OzAdmobBannerAd.onAdLoaded(key, ad)
             }

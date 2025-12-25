@@ -12,7 +12,7 @@ import com.google.android.gms.ads.rewarded.RewardItem
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback
 import com.oz.android.ads.network.admobs.ads_component.AdmobBase
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.wrapper.OzAdListener
 
 /**
  * Class quản lý rewarded interstitial ads từ AdMob
@@ -22,7 +22,7 @@ import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 class AdmobRewardedInterstitial(
     context: Context,
     adUnitId: String,
-    listener: OzAdmobListener<AdmobRewardedInterstitial>
+    listener: OzAdListener<AdmobRewardedInterstitial>
 ) : AdmobBase<AdmobRewardedInterstitial>(context, adUnitId, listener) {
     private var rewardedInterstitialAd: RewardedInterstitialAd? = null
     private var isLoaded = false

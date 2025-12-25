@@ -2,6 +2,9 @@ package com.oz.android.ads.network.admobs.ads_component
 
 import android.content.Context
 import androidx.annotation.RestrictTo
+import com.google.android.gms.ads.AdError
+import com.oz.android.wrapper.OzAdError
+import com.oz.android.wrapper.OzAdListener
 
 /**
  * @param AdType The type of the Ad Object (AdView, InterstitialAd, NativeAd, etc.)
@@ -10,7 +13,7 @@ import androidx.annotation.RestrictTo
 abstract class AdmobBase<AdType>(
     val context: Context,
     var adUnitId: String,
-    var listener: OzAdmobListener<AdType>? = null // Default to null = Optional
+    var listener: OzAdListener<AdType>? = null // Default to null = Optional
 ) {
 
     /**
@@ -35,4 +38,12 @@ abstract class AdmobBase<AdType>(
      * This relies on the listener being set.
      */
     abstract fun loadThenShow()
+}
+
+fun AdError.toOzError(): OzAdError {
+    return OzAdError(
+        code = code,
+        message = message,
+        domain = domain,
+    )
 }

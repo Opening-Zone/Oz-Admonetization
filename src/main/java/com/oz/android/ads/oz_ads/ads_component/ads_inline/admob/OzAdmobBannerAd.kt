@@ -7,8 +7,10 @@ import android.util.Log
 import androidx.annotation.RestrictTo
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.LoadAdError
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.ads.network.admobs.ads_component.interstitial.AdmobInterstitial
+import com.oz.android.wrapper.OzAdListener
 import com.oz.android.ads.oz_ads.ads_component.ads_inline.InlineAds
+import com.oz.android.wrapper.OzAdError
 
 /**
  * Implementation cụ thể của InlineAds cho AdMob Banner
@@ -45,13 +47,13 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
             return null
         }
 
-        val listener = object : OzAdmobListener<AdmobBanner>() {
+        val bannerListener = object : OzAdListener<AdmobBanner>() {
             override fun onAdLoaded(ad: AdmobBanner) {
                 // Pass the loaded ad object to the parent
                 this@OzAdmobBannerAd.onAdLoaded(key, ad)
             }
 
-            override fun onAdFailedToLoad(error: LoadAdError) {
+            override fun onAdFailedToLoad(error: OzAdError) {
                 // Notify parent about the failure
                 this@OzAdmobBannerAd.onAdLoadFailed(key, error.message)
             }
@@ -62,9 +64,9 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
             }
         }
 
-        banner = AdmobBanner(context, adUnitId, listener)
+        val mergedListener = bannerListener.merge(listener)
 
-        return AdmobBanner(context, adUnitId, listener)
+        return AdmobBanner(context, adUnitId, mergedListener)
     }
 
     override fun onLoadAd(key: String, ad: AdmobBanner) {

@@ -7,7 +7,8 @@ import android.view.ViewGroup
 import androidx.annotation.RestrictTo
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import com.oz.android.ads.oz_ads.OzAdsManager
+import com.oz.android.wrapper.OzAdListener
+import com.oz.android.wrapper.OzAdsManager
 import kotlinx.coroutines.launch
 
 /**
@@ -20,12 +21,12 @@ import kotlinx.coroutines.launch
  * Các implementation cụ thể (như AdmobInlineAds, AdmobOverlayAds) sẽ extend class này
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-abstract class OzAds<AdType> : IOzAds, ViewGroup {
+abstract class OzAds<AdType> : ViewGroup {
     @JvmOverloads
     constructor(
         context: Context?,
         attrs: AttributeSet? = null,
-        defStyleAttr: Int = 0
+        defStyleAttr: Int = 0,
     ) : super(context, attrs, defStyleAttr)
 
     companion object {
@@ -38,22 +39,14 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
     // Single pending show callback instead of a Map
     private var pendingShowRunnable: (() -> Unit)? = null
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
-            OzAdsManager.getInstance().enableAd.collect { shouldShow ->
-                if (!shouldShow) {
-                    hideAds()
-                }
-            }
-        }
-    }
+    //listener
+    var listener: OzAdListener<AdType>? = null
 
     /**
      * Implementation of isAdEnable() from the interface
      * @return true if ad should be shown or load, false otherwise
      */
-    override fun isAdEnable(): Boolean {
+    fun isAdEnable(): Boolean {
         Log.d(TAG, "isAdEnable: " + OzAdsManager.getInstance().enableAd.value)
         return OzAdsManager.getInstance().enableAd.value
     }
@@ -63,7 +56,7 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
      * Sets the single ad key for this view instance and pre-registers its state.
      * @param key The ad key to be managed by this instance.
      */
-    override fun setPreloadKey(key: String) {
+    fun setPreloadKey(key: String) {
         this.adKey = key
         Log.d(TAG, "Ad key set to: $key")
         // Set state to IDLE if not already present
@@ -83,7 +76,7 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
      * Implementation of loadAd() from the interface.
      * Loads the ad for the key managed by this instance.
      */
-    override fun loadAd() {
+    open fun loadAd() {
         val key = adKey
         if (key == null) {
             Log.w(TAG, "Ad key not set. Call setPreloadKey() first.")
@@ -126,7 +119,7 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
         }
     }
 
-    override fun loadThenShow(key: String) {
+    fun loadThenShow(key: String) {
         loadAd()
         showAds(key)
     }
@@ -140,7 +133,7 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
      * Implementation of showAds() from the interface
      * @param key Key to identify the ad to show. Must match the key managed by this instance.
      */
-    override fun showAds(key: String) {
+    open fun showAds(key: String) {
         if (this.adKey == null) {
             Log.d(TAG, "Ad key not set, setting it to '$key' from showAds.")
             setPreloadKey(key)
@@ -353,15 +346,14 @@ abstract class OzAds<AdType> : IOzAds, ViewGroup {
         pendingShowRunnable = null
     }
 
-    /**
-     * Get the key of the ad currently being shown by this view instance, if any.
-     * @return The key of the ad currently being shown, or null.
-     */
-    fun getCurrentShowingKey(): String? {
-        return if (adKey != null && getAdState(adKey!!) == AdState.SHOWING) {
-            adKey
-        } else {
-            null
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
+            OzAdsManager.getInstance().enableAd.collect { shouldShow ->
+                if (!shouldShow) {
+                    hideAds()
+                }
+            }
         }
     }
 }

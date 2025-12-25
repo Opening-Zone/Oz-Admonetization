@@ -9,15 +9,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.WindowManager
+import androidx.annotation.RestrictTo
 import com.oz.android.ads.R
 import com.oz.android.ads.oz_ads.ads_component.AdState
 import com.oz.android.ads.oz_ads.ads_component.OzAds
+import com.oz.android.wrapper.OzAdListener
 
 /**
  * Abstract class for managing fullscreen overlay ads (Interstitial, App Open)
  * Extends OzAds to inherit basic ad management capabilities
  * Implements logic for time gaps between ad displays
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 abstract class OverlayAds<AdType> @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

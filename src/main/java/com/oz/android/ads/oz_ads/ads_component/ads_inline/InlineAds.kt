@@ -9,8 +9,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import androidx.annotation.RestrictTo
 import com.oz.android.ads.R
-import com.oz.android.ads.oz_ads.OzAdsManager
+import com.oz.android.wrapper.OzAdsManager
 import com.oz.android.ads.oz_ads.ads_component.OzAds
 import io.github.usefulness.shimmer.android.ShimmerFrameLayout
 
@@ -25,6 +26,7 @@ import io.github.usefulness.shimmer.android.ShimmerFrameLayout
  *
  * Các implementation cụ thể sẽ extend class này và implement các abstract methods
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 abstract class InlineAds<AdType> @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

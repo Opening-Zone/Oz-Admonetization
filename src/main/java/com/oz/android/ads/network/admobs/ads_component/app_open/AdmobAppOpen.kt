@@ -11,7 +11,8 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.appopen.AppOpenAd.AppOpenAdLoadCallback
 import com.oz.android.ads.network.admobs.ads_component.AdmobBase
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.ads.network.admobs.ads_component.toOzError
+import com.oz.android.wrapper.OzAdListener
 import java.util.Date
 
 /**
@@ -22,7 +23,7 @@ import java.util.Date
 class AdmobAppOpen(
     context: Context,
     adUnitId: String,
-    listener: OzAdmobListener<AdmobAppOpen>? = null
+    listener: OzAdListener<AdmobAppOpen>? = null
 ) : AdmobBase<AdmobAppOpen>(context, adUnitId, listener) {
 
     private var appOpenAd: AppOpenAd? = null
@@ -81,7 +82,7 @@ class AdmobAppOpen(
                     adIsLoading = false
                     pendingActivity = null
 
-                    listener?.onAdFailedToLoad(adError)
+                    listener?.onAdFailedToLoad(adError.toOzError())
                 }
             }
         )
@@ -191,7 +192,7 @@ class AdmobAppOpen(
                 appOpenAd = null
                 isLoaded = false
                 isShowingAd = false
-                listener?.onAdFailedToShowFullScreenContent(adError)
+                listener?.onAdFailedToShowFullScreenContent(adError.toOzError())
             }
 
             override fun onAdShowedFullScreenContent() {

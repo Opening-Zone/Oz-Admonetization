@@ -12,7 +12,7 @@ import com.google.android.gms.ads.OnUserEarnedRewardListener
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.oz.android.ads.network.admobs.ads_component.AdmobBase
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.wrapper.OzAdListener
 
 /**
  * Class quản lý rewarded video ads từ AdMob
@@ -22,7 +22,7 @@ import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 class AdmobReward(
     context: Context,
     adUnitId: String,
-    listener: OzAdmobListener<AdmobReward>? = null
+    listener: OzAdListener<AdmobReward>? = null
 ) : AdmobBase<AdmobReward>(context, adUnitId, listener) {
     private var rewardedAd: RewardedAd? = null
     private var isLoaded = false

@@ -8,7 +8,8 @@ import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 import com.oz.android.ads.network.admobs.ads_component.AdmobBase
-import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
+import com.oz.android.ads.network.admobs.ads_component.toOzError
+import com.oz.android.wrapper.OzAdListener
 
 /**
  * Class quản lý banner ads từ AdMob
@@ -18,7 +19,7 @@ import com.oz.android.ads.network.admobs.ads_component.OzAdmobListener
 class AdmobBanner(
     context: Context,
     adUnitId: String,
-    listener: OzAdmobListener<AdmobBanner>?
+    listener: OzAdListener<AdmobBanner>?
 ) : AdmobBase<AdmobBanner>(
     context,
     adUnitId,
@@ -64,7 +65,7 @@ class AdmobBanner(
                     override fun onAdFailedToLoad(error: LoadAdError) {
                         isLoaded = false
                         Log.e(TAG, "Banner ad failed to load: ${error.message}")
-                        listener?.onAdFailedToLoad(error)
+                        listener?.onAdFailedToLoad(error.toOzError())
                         pendingContainer = null
                     }
 
