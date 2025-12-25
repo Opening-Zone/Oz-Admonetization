@@ -115,14 +115,6 @@ class GoogleMobileAdsConsentManager private constructor(context: Context) {
         // [END present_privacy_options_form]
     }
 
-    /**
-     * Get activity from AdMobManager instance
-     * @return Activity if AdMob has been initialized, null otherwise
-     */
-    fun getActivityFromAdMob(): Activity? {
-        return AdMobManager.getInstance().getCurrentActivity()
-    }
-
     companion object {
         @Volatile private var instance: GoogleMobileAdsConsentManager? = null
 

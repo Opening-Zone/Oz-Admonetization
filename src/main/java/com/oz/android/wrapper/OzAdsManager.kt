@@ -1,15 +1,11 @@
 package com.oz.android.wrapper
 
 import android.app.Activity
-import com.google.android.gms.ads.MobileAds
 import com.oz.android.ads.network.admobs.AdMobManager
-import com.oz.android.ads.network.admobs.AdMobResult
-import com.oz.android.ads.network.admobs.IAdMobManager
 import com.oz.android.ads.oz_ads.AdState
-import kotlinx.coroutines.CoroutineScope
+import com.oz.android.ads.oz_ads.OzAdsResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
@@ -21,7 +17,7 @@ import kotlin.coroutines.resume
  * Following Single Responsibility Principle - orchestrates ad network initialization
  */
 class OzAdsManager private constructor(
-    private val adMobManager: IAdMobManager
+    private val adMobManager: AdMobManager
 ) {
 
     @Volatile
@@ -90,7 +86,7 @@ class OzAdsManager private constructor(
         /**
          * Get singleton instance with default dependencies
          */
-        fun getInstance(adMobManager: IAdMobManager = AdMobManager.getInstance()): OzAdsManager {
+        fun getInstance(adMobManager: AdMobManager = AdMobManager.getInstance()): OzAdsManager {
             return instance ?: synchronized(this) {
                 instance ?: OzAdsManager(adMobManager).also { instance = it }
             }
@@ -111,47 +107,21 @@ class OzAdsManager private constructor(
      * Currently initializes AdMob only
      *
      * @param activity The activity context for initialization
-     * @param adMobAppId Optional AdMob app ID (will use manifest value if null)
+     * @param testDeviceList List of test device IDs for AdMob
+     * @param onSuccess Optional callback invoked when initialization succeeds
+     * @param onError Optional callback invoked when initialization fails
      * @return Result indicating success or failure
      */
     suspend fun init(
         activity: Activity,
-        adMobAppId: String? = null
+        testDeviceList: List<String>,
+        onSuccess: (() -> Unit)? = null,
+        onError: ((Throwable) -> Unit)? = null
     ): OzAdsResult<Unit> = suspendCancellableCoroutine { continuation ->
-        MobileAds.initialize(activity) {
-            val scope = CoroutineScope(continuation.context)
-            scope.launch {
-                val result = adMobManager.initialize(activity, adMobAppId)
-                val ozResult = when (result) {
-                    is AdMobResult.Success -> {
-                        initialized = true
-                        OzAdsResult.Success(Unit)
-                    }
-                    is AdMobResult.Error -> {
-                        initialized = false
-                        OzAdsResult.Error(result.exception)
-                    }
-                }
-                if (continuation.isActive) {
-                    continuation.resume(ozResult)
-                }
-            }
+        adMobManager.initializeMobileAdsSdk(testDeviceList, activity) {
+            initialized = true
+            continuation.resume(OzAdsResult.Success(Unit))
+            onSuccess?.invoke()
         }
     }
-
-    /**
-     * Check if all ad networks are initialized
-     */
-    fun isInitialized(): Boolean {
-        return initialized && adMobManager.isInitialized()
-    }
-}
-
-/**
- * Sealed class for OzAds operation results
- * Following Clean Architecture error handling pattern
- */
-sealed class OzAdsResult<out T> {
-    data class Success<T>(val data: T) : OzAdsResult<T>()
-    data class Error(val exception: Throwable) : OzAdsResult<Nothing>()
 }
