@@ -91,9 +91,15 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
     protected abstract fun setShimmerSize(key: String)
 
     override fun loadAd() {
+        loadAd(false)
+    }
+
+    fun loadAd(loadInBackground: Boolean) {
         adKey?.let { key ->
-            setShimmerSize(key)
-            startShimmer()
+            if(!loadInBackground){
+                setShimmerSize(key)
+                startShimmer()
+            }
             super.loadAd()
         } ?: run {
             Log.w(TAG, "No key set. Init the ads with key and id first")
@@ -123,24 +129,6 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
      * @return Thời gian refresh tính bằng milliseconds
      */
     fun getRefreshTime(): Long = refreshTime
-
-    /**
-     * Called khi ad được load thành công
-     * Các implementation nên gọi method này sau khi load ad thành công
-     * @param key Key của ad đã load thành công
-     * @param ad The loaded ad object
-     */
-    override fun onAdLoaded(key: String, ad: AdType) {
-        super.onAdLoaded(key, ad)
-
-        if (isVisible) {
-            // FIX: Show the ad immediately when it loads!
-            showAds(key)
-
-            // FIX: Start the timer only AFTER the ad has loaded/shown
-            scheduleNextRefresh()
-        }
-    }
 
     /**
      * Called khi ad load thất bại
