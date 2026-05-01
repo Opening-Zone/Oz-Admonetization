@@ -37,9 +37,6 @@ abstract class OzAds<AdType> : ViewGroup {
     // The single key managed by this view instance
     protected var adKey: String? = null
 
-    // Single pending show callback instead of a Map
-    private var pendingShowRunnable: (() -> Unit)? = null
-
     //listener
     var listener: OzAdListener<AdType>? = null
 
@@ -121,6 +118,9 @@ abstract class OzAds<AdType> : ViewGroup {
     }
 
     fun loadThenShow(key: String) {
+        if (this.adKey == null) {
+            setPreloadKey(key)
+        }
         loadAd()
         showAds(key)
     }
@@ -159,7 +159,7 @@ abstract class OzAds<AdType> : ViewGroup {
             AdState.LOADING -> {
                 Log.d(TAG, "Ad loading for key: $key, setting pending show")
                 // Store the logic to run once loaded
-                pendingShowRunnable = {
+                OzAdsManager.getInstance().setPendingShow(key) {
                     val ad: AdType? = OzAdsManager.getInstance().getAd(key)
                     if (ad != null) {
                         setAdState(key, AdState.SHOWING)
@@ -232,12 +232,8 @@ abstract class OzAds<AdType> : ViewGroup {
             setAdState(key, AdState.LOADED)
             Log.d(TAG, "Ad loaded successfully for key: $key")
 
-            // Check if there's a pending show for this instance
-            val runnable = pendingShowRunnable
-            if (runnable != null) {
-                pendingShowRunnable = null // Clear it
-                runnable.invoke()
-            }
+            // Check if there's a pending show globally for this key
+            OzAdsManager.getInstance().executePendingShow(key)
         } else {
             // Loaded ad is not expected, destroy it
             destroyAd(ad)
@@ -255,7 +251,7 @@ abstract class OzAds<AdType> : ViewGroup {
         setAdState(key, AdState.IDLE)
 
         // Clear pending show since load failed
-        pendingShowRunnable = null
+        OzAdsManager.getInstance().clearPendingShow(key)
     }
 
     /**
@@ -339,11 +335,9 @@ abstract class OzAds<AdType> : ViewGroup {
             Log.d(TAG, "Destroying ad for view instance, key: $key")
             onDestroyAd(key)
             setAdState(key, AdState.IDLE)
+            OzAdsManager.getInstance().clearPendingShow(key)
         }
         adKey = null
-
-        // Clear pending show
-        pendingShowRunnable = null
     }
 
     override fun onAttachedToWindow() {

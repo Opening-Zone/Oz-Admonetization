@@ -43,6 +43,9 @@ class OzAdsManager private constructor(
     // Ad store (key -> ad object)
     private val adStore = ConcurrentHashMap<String, Any>()
 
+    // Pending show runnables
+    private val pendingShows = ConcurrentHashMap<String, () -> Unit>()
+
     // ----------------------------------------------------------------
     // Configuration Methods
     // ----------------------------------------------------------------
@@ -130,6 +133,18 @@ class OzAdsManager private constructor(
 
     fun removeAd(key: String): Any? {
         return adStore.remove(key)
+    }
+
+    fun setPendingShow(key: String, runnable: () -> Unit) {
+        pendingShows[key] = runnable
+    }
+
+    fun executePendingShow(key: String) {
+        pendingShows.remove(key)?.invoke()
+    }
+
+    fun clearPendingShow(key: String) {
+        pendingShows.remove(key)
     }
 
     // ----------------------------------------------------------------
