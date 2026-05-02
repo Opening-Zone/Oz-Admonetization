@@ -106,6 +106,14 @@ class OzAdsManager private constructor(
         _isFullScreenAdShowing.value = false
     }
 
+    /**
+     * Check if a fullscreen ad can be shown.
+     * @return true if no fullscreen ad is currently showing.
+     */
+    fun canShowFullScreenAd(): Boolean {
+        return !_isFullScreenAdShowing.value
+    }
+
     // ----------------------------------------------------------------
     // Ad State & Storage Methods
     // ----------------------------------------------------------------

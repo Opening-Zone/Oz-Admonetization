@@ -144,9 +144,15 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
     }
 
     /**
-     * Override showAds to enforce time gap logic
+     * Override showAds to enforce time gap logic and check if another fullscreen ad is showing
      */
     override fun showAds(key: String) {
+        if (!OzAdsManager.getInstance().canShowFullScreenAd()) {
+            Log.d(TAG, "Skipping showAds for key: $key. Another fullscreen ad is already showing.")
+            onAdShowFailed(key, "Another fullscreen ad is already showing.")
+            return
+        }
+
         if (!isTimeGapSatisfied()) {
             val remaining = getRemainingCooldownTime()
             val category = getAdCategory()
