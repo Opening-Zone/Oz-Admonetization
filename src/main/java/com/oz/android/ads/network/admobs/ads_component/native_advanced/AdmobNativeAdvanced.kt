@@ -19,6 +19,7 @@ import com.oz.android.utils.listener.OzAdListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Class quản lý native advanced ads từ AdMob
@@ -140,7 +141,9 @@ class AdmobNativeAdvanced(
                 )
                 .build()
 
-            adLoader.loadAd(AdRequest.Builder().build())
+            withContext(Dispatchers.Main){
+                adLoader.loadAd(AdRequest.Builder().build())
+            }
         }
     }
 
@@ -240,7 +243,6 @@ class AdmobNativeAdvanced(
     private fun populateNativeAdView(nativeAd: NativeAd, nativeAdView: NativeAdView) {
         // Set the media view if available
         nativeAdView.mediaView?.let { mediaView ->
-            nativeAdView.mediaView = mediaView
             nativeAd.mediaContent?.let { mediaView.setMediaContent(it) }
         }
 

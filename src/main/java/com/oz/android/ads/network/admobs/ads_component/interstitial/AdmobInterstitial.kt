@@ -115,8 +115,8 @@ class AdmobInterstitial(
         }
 
         // Show the ad
-        listener?.onNextAction()
         currentAd.show(activity)
+        listener?.onNextAction()
         Log.d(TAG, "Interstitial ad displayed")
     }
 

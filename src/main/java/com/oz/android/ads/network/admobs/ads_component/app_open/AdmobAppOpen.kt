@@ -130,8 +130,8 @@ class AdmobAppOpen(
 
         // Show the ad
         isShowingAd = true
-        listener?.onNextAction()
         currentAd.show(activity)
+        listener?.onNextAction()
         Log.d(TAG, "App Open ad displayed")
     }
 

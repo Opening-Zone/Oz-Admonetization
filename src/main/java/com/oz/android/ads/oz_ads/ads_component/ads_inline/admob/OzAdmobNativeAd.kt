@@ -4,10 +4,9 @@ import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.View
 import androidx.annotation.RestrictTo
-import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAdView
+import com.oz.android.ads.R
 import com.oz.android.utils.listener.OzAdListener
 import com.oz.android.ads.network.admobs.ads_component.native_advanced.AdmobNativeAdvanced
 import com.oz.android.ads.oz_ads.ads_component.ads_inline.InlineAds
@@ -187,56 +186,15 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
      * Bind các view con trong NativeAdView dựa trên ID chuẩn (tương thích với layout_native_large.xml)
      */
     private fun bindStandardViews(nativeAdView: NativeAdView) {
-        // Map các ID từ layout XML vào properties của NativeAdView
-        // Sử dụng identifier string để tìm ID resource
-
-        // Headline
-        findIdAndSet(nativeAdView, "ad_headline") { view -> nativeAdView.headlineView = view }
-
-        // Body
-        findIdAndSet(nativeAdView, "ad_body") { view -> nativeAdView.bodyView = view }
-
-        // Call To Action
-        findIdAndSet(nativeAdView, "ad_call_to_action") { view ->
-            nativeAdView.callToActionView = view
-        }
-
-        // App Icon
-        findIdAndSet(nativeAdView, "ad_app_icon") { view -> nativeAdView.iconView = view }
-
-        // Price
-        findIdAndSet(nativeAdView, "ad_price") { view -> nativeAdView.priceView = view }
-
-        // Star Rating (ad_stars in XML)
-        findIdAndSet(nativeAdView, "ad_stars") { view -> nativeAdView.starRatingView = view }
-
-        // Store
-        findIdAndSet(nativeAdView, "ad_store") { view -> nativeAdView.storeView = view }
-
-        // Advertiser
-        findIdAndSet(nativeAdView, "ad_advertiser") { view -> nativeAdView.advertiserView = view }
-
-        // Media View
-        findIdAndSet(nativeAdView, "ad_media") { view ->
-            if (view is MediaView) {
-                nativeAdView.mediaView = view
-            }
-        }
-    }
-
-    private fun findIdAndSet(
-        root: NativeAdView,
-        idName: String,
-        setter: (android.view.View) -> Unit
-    ) {
-        val packageName = context.packageName
-        val resId = context.resources.getIdentifier(idName, "id", packageName)
-        if (resId != 0) {
-            val view = root.findViewById<android.view.View>(resId)
-            if (view != null) {
-                setter(view)
-            }
-        }
+        nativeAdView.headlineView = nativeAdView.findViewById(R.id.ad_headline)
+        nativeAdView.bodyView = nativeAdView.findViewById(R.id.ad_body)
+        nativeAdView.callToActionView = nativeAdView.findViewById(R.id.ad_call_to_action)
+        nativeAdView.iconView = nativeAdView.findViewById(R.id.ad_app_icon)
+        nativeAdView.priceView = nativeAdView.findViewById(R.id.ad_price)
+        nativeAdView.starRatingView = nativeAdView.findViewById(R.id.ad_stars)
+        nativeAdView.storeView = nativeAdView.findViewById(R.id.ad_store)
+        nativeAdView.advertiserView = nativeAdView.findViewById(R.id.ad_advertiser)
+        nativeAdView.mediaView = nativeAdView.findViewById(R.id.ad_media)
     }
 
     override fun hideAds() {
