@@ -1,20 +1,16 @@
 package com.oz.android.ads.oz_ads.ads_component.ads_inline.admob
 
 import AdmobBanner
-import android.app.Activity
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
 import androidx.annotation.RestrictTo
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.ads.AdSize
 import com.oz.android.utils.listener.OzAdListener
 import com.oz.android.ads.oz_ads.ads_component.ads_inline.InlineAds
 import com.oz.android.utils.listener.OzAdError
 import com.oz.android.wrapper.OzAdsManager
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.oz.android.utils.enums.AdState
 
 /**
  * Implementation cụ thể của InlineAds cho AdMob Banner
@@ -86,8 +82,10 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
         val bannerListener = object : OzAdListener<AdmobBanner>() {
             override fun onAdLoaded(ad: AdmobBanner) {
-                // Pass the loaded ad object to the parent
-                this@OzAdmobBannerAd.onAdLoaded(key, ad)
+                // Pass the loaded ad object to the parent only if the state is LOADING (prevents auto-refresh conflicts)
+                if (getAdState(key) == AdState.LOADING) {
+                    this@OzAdmobBannerAd.onAdLoaded(key, ad)
+                }
             }
 
             override fun onAdFailedToLoad(error: OzAdError) {
@@ -171,6 +169,8 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
     override fun destroyAd(ad: AdmobBanner) {
         Log.d(TAG, "Destroying banner ad")
+        // Detach from parent first to avoid "WebView.destroy() called while WebView is still attached"
+        ad.detachFromParent()
         ad.destroy()
     }
 

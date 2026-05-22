@@ -235,6 +235,18 @@ class AdmobBanner(
     }
 
     /**
+     * Tách adView khỏi parent ViewGroup hiện tại (nếu có)
+     */
+    fun detachFromParent() {
+        adView?.let { view ->
+            val parent = view.parent
+            if (parent is ViewGroup) {
+                parent.removeView(view)
+            }
+        }
+    }
+
+    /**
      * Destroy quảng cáo (gọi trong onDestroy của Activity/Fragment)
      */
     fun destroy() {
