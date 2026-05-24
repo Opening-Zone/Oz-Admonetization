@@ -28,8 +28,6 @@ class AdmobReward(
     private var rewardedAd: RewardedAd? = null
     private var isLoaded = false
     private var adIsLoading = false
-    private var pendingActivity: Activity? = null
-    private var pendingRewardCallback: OnUserEarnedRewardListener? = null
 
     companion object {
         private const val TAG = "AdmobReward"
@@ -64,15 +62,6 @@ class AdmobReward(
 
                     // Setup FullScreenContentCallback
                     setupFullScreenContentCallback(ad)
-
-                    // Nếu có activity và callback đang chờ, tự động hiển thị
-                    pendingActivity?.let { activity ->
-                        pendingRewardCallback?.let { callback ->
-                            show(activity, callback)
-                            pendingActivity = null
-                            pendingRewardCallback = null
-                        }
-                    }
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
@@ -80,8 +69,6 @@ class AdmobReward(
                     rewardedAd = null
                     isLoaded = false
                     adIsLoading = false
-                    pendingActivity = null
-                    pendingRewardCallback = null
                     
                     listener?.onAdFailedToLoad(adError.toOzError())
                 }
@@ -109,15 +96,11 @@ class AdmobReward(
         val currentAd = rewardedAd
         if (currentAd == null) {
             Log.w(TAG, "RewardedAd is null. Call load() first")
-            pendingActivity = activity
-            pendingRewardCallback = rewardCallback
             return
         }
 
         if (!isLoaded) {
-            Log.w(TAG, "Ad not loaded yet. It will be shown automatically when loaded")
-            pendingActivity = activity
-            pendingRewardCallback = rewardCallback
+            Log.w(TAG, "Ad not loaded yet.")
             return
         }
 
@@ -143,8 +126,6 @@ class AdmobReward(
      * @param rewardCallback Callback để xử lý khi user nhận reward
      */
     fun loadThenShow(activity: Activity, rewardCallback: OnUserEarnedRewardListener) {
-        pendingActivity = activity
-        pendingRewardCallback = rewardCallback
         load()
     }
 

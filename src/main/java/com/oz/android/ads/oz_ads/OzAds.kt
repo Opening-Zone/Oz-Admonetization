@@ -333,6 +333,8 @@ abstract class OzAds<AdType> : ViewGroup {
     open fun destroy() {
         adKey?.let { key ->
             Log.d(TAG, "Destroying ad for view instance, key: $key")
+            onDestroyAd(key)
+            setAdState(key, AdState.IDLE)
             OzAdsManager.getInstance().clearPendingShow(key) // remove pending show to avoid crash when show on destroyed view
         }
         adKey = null

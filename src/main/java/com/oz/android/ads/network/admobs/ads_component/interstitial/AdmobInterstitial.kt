@@ -29,7 +29,6 @@ class AdmobInterstitial(
     private var interstitialAd: InterstitialAd? = null
     private var isLoaded = false
     private var adIsLoading = false
-    private var pendingActivity: Activity? = null
     private var loadTime: Long = 0
 
     companion object {
@@ -66,12 +65,6 @@ class AdmobInterstitial(
 
                     // Setup FullScreenContentCallback
                     setupFullScreenContentCallback(ad)
-
-                    // Nếu có activity đang chờ, tự động hiển thị
-                    pendingActivity?.let { activity ->
-                        show(activity)
-                        pendingActivity = null
-                    }
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
@@ -80,7 +73,6 @@ class AdmobInterstitial(
                     interstitialAd = null
                     isLoaded = false
                     adIsLoading = false
-                    pendingActivity = null
 
                     listener?.onAdFailedToLoad(adError.toOzError())
                 }
@@ -103,14 +95,12 @@ class AdmobInterstitial(
     fun show(activity: Activity) {
         val currentAd = interstitialAd
         if (currentAd == null || isAdExpired()) {
-            Log.w(TAG, "InterstitialAd is null. Call load() first")
-            pendingActivity = activity
+            Log.w(TAG, "InterstitialAd is null or expired. Call load() first")
             return
         }
 
         if (!isLoaded) {
-            Log.w(TAG, "Ad not loaded yet. It will be shown automatically when loaded")
-            pendingActivity = activity
+            Log.w(TAG, "Ad not loaded yet.")
             return
         }
 
@@ -125,11 +115,7 @@ class AdmobInterstitial(
      * Lưu ý: Interstitial cần Activity, sử dụng loadThenShow(activity: Activity) thay vì method này
      */
     override fun loadThenShow() {
-        if (pendingActivity != null) {
-            loadThenShow(pendingActivity!!)
-        } else {
-            Log.w(TAG, "loadThenShow() called without activity. Use loadThenShow(activity: Activity) for interstitial ads")
-        }
+        Log.w(TAG, "loadThenShow() is not supported on AdmobInterstitial. Use OzAdmobIntersAd instead.")
     }
 
     /**
@@ -143,7 +129,6 @@ class AdmobInterstitial(
             return
         }
 
-        pendingActivity = activity
         if (showOverlay) {
             OzLoadingDialog.showFullScreenLoadingDialog(activity)
             
@@ -209,7 +194,7 @@ class AdmobInterstitial(
     }
 
     /**
-     * Kiểm tra xem ad đã hết hạn chưa (AdMob interstitial hết hạn sau 4 tiếng)
+     * Kiểm tra xem ad đã hết hạn chưa (AdMob interstitial hết hạn sau 1 tiếng)
      */
     private fun isAdExpired(): Boolean {
         return (System.currentTimeMillis() - loadTime) >= 1L * 60L * 60L * 1000L

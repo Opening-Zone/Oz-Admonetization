@@ -30,7 +30,6 @@ class AdmobAppOpen(
     private var isLoaded = false
     private var adIsLoading = false
     private var isShowingAd = false
-    private var pendingActivity: Activity? = null
     private var loadTime: Long = 0
 
     companion object {
@@ -65,15 +64,6 @@ class AdmobAppOpen(
                     loadTime = Date().time
 
                     listener?.onAdLoaded(this@AdmobAppOpen)
-
-                    // Note: FullScreenContentCallback is set up in show() method, not here
-                    // This follows Google's best practice - callback should be set right before showing
-
-                    // Nếu có activity đang chờ, tự động hiển thị
-                    pendingActivity?.let { activity ->
-                        show(activity)
-                        pendingActivity = null
-                    }
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
@@ -81,7 +71,6 @@ class AdmobAppOpen(
                     appOpenAd = null
                     isLoaded = false
                     adIsLoading = false
-                    pendingActivity = null
 
                     listener?.onAdFailedToLoad(adError.toOzError())
                     listener?.onNextAction()
@@ -111,17 +100,13 @@ class AdmobAppOpen(
 
         // If the app open ad is not available yet, load it
         if (!isAdAvailable()) {
-            Log.d(TAG, "The app open ad is not ready yet. Loading...")
-            pendingActivity = activity
-            load()
+            Log.d(TAG, "The app open ad is not ready yet.")
             return
         }
 
         val currentAd = appOpenAd
         if (currentAd == null) {
             Log.w(TAG, "AppOpenAd is null. Call load() first")
-            pendingActivity = activity
-            load()
             return
         }
 
@@ -140,11 +125,7 @@ class AdmobAppOpen(
      * Lưu ý: App Open cần Activity, sử dụng loadThenShow(activity: Activity) thay vì method này
      */
     override fun loadThenShow() {
-        if (pendingActivity != null) {
-            loadThenShow(pendingActivity!!)
-        } else {
-            Log.w(TAG, "loadThenShow() called without activity. Use loadThenShow(activity: Activity) for App Open ads")
-        }
+        Log.w(TAG, "loadThenShow() is not supported on AdmobAppOpen. Use OzAdmobAppOpenAd instead.")
     }
 
     /**
@@ -152,7 +133,6 @@ class AdmobAppOpen(
      * @param activity Activity để hiển thị App Open ad
      */
     fun loadThenShow(activity: Activity) {
-        pendingActivity = activity
         load()
     }
 

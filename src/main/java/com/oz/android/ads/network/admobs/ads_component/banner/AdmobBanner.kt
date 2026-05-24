@@ -1,3 +1,5 @@
+package com.oz.android.ads.network.admobs.ads_component.banner
+
 import android.app.Activity
 import android.content.Context
 import android.os.Bundle

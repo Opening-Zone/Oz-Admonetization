@@ -1,6 +1,6 @@
 package com.oz.android.ads.oz_ads.ads_component.ads_inline.admob
 
-import AdmobBanner
+import com.oz.android.ads.network.admobs.ads_component.banner.AdmobBanner
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
