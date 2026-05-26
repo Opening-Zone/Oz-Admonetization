@@ -66,7 +66,7 @@ Add the library to your module's `build.gradle.kts`:
 ```kotlin
 dependencies {
     // OzAds Library
-    implementation("com.oz.android:oz-ads:1.0.0") // Update with actual version
+    implementation("com.oz.android:oz-ads:1.0.1") // Update with actual version
     
     // Required dependencies (if not already included)
     implementation("com.google.android.gms:play-services-ads:24.9.0")
