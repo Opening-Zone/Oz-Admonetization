@@ -38,6 +38,11 @@ class AdmobNativeAdvanced(
     private var pendingContainer: ViewGroup? = null
     private var pendingNativeAdView: NativeAdView? = null
     private var onAdLoadedCallback: ((NativeAd) -> Unit)? = null
+    private var mediaAspectRatio: Int? = null
+
+    fun setMediaRatio(ratio: Int) {
+        this.mediaAspectRatio = ratio
+    }
 
     companion object {
         private const val TAG = "AdmobNativeAdvanced"
@@ -106,9 +111,14 @@ class AdmobNativeAdvanced(
                 .setStartMuted(true)
                 .build()
 
-            val adOptions = NativeAdOptions.Builder()
+            val adOptionsBuilder = NativeAdOptions.Builder()
                 .setVideoOptions(videoOptions)
-                .build()
+
+            mediaAspectRatio?.let {
+                adOptionsBuilder.setMediaAspectRatio(it)
+            }
+
+            val adOptions = adOptionsBuilder.build()
 
             builder.withNativeAdOptions(adOptions)
 

@@ -28,6 +28,13 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
     // Map key -> adUnitId
     private val adUnitIds = ConcurrentHashMap<String, String>()
 
+    private var mediaAspectRatio: Int? = null
+
+    fun setMediaRatio(ratio: Int) {
+        this.mediaAspectRatio = ratio
+        Log.d(TAG, "setMediaRatio: $ratio")
+    }
+
     // Map key -> NativeAdView
     private val nativeAdViews = ConcurrentHashMap<String, NativeAdView>()
 
@@ -95,7 +102,9 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
 
         val mergedListener = nativeListener.merge(listener)
 
-        return AdmobNativeAdvanced(context, adUnitId, mergedListener)
+        return AdmobNativeAdvanced(context, adUnitId, mergedListener).apply {
+            this@OzAdmobNativeAd.mediaAspectRatio?.let { setMediaRatio(it) }
+        }
     }
 
     override fun onLoadAd(key: String, ad: AdmobNativeAdvanced) {
