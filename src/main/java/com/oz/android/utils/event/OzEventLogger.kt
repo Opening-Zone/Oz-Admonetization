@@ -60,17 +60,6 @@ object OzEventLogger {
             putInt("precision", precision) // Custom param for precision
         }
         firebaseAnalytics.logEvent("app_event_impression", revenueParams)
-
-        // 3. Log Custom Debug Event (Original behavior with micros)
-        // Useful if you have existing charts relying on "valuemicros"
-        val debugParams = Bundle().apply {
-            putDouble("valuemicros", revenueMicros.toDouble())
-            putString("currency", "USD")
-            putInt("precision", precision)
-            putString("adunitid", adUnitId)
-            putString("network", network)
-        }
-        firebaseAnalytics.logEvent("paid_ad_impression_debug", debugParams)
     }
 
     fun logClickAdsEvent(context: Context, adUnitId: String) {
