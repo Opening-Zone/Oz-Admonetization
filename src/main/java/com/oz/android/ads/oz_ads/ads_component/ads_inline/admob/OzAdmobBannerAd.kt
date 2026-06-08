@@ -183,7 +183,11 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
     override fun onResumeAd() {
         Log.d(TAG, "Resuming all banner ads")
-        visibility = VISIBLE
+        if (isAdEnable()) {
+            visibility = VISIBLE
+        } else {
+            visibility = GONE
+        }
     }
 }
 

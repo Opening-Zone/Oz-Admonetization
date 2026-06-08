@@ -45,7 +45,6 @@ abstract class OzAds<AdType> : ViewGroup {
      * @return true if ad should be shown or load, false otherwise
      */
     fun isAdEnable(): Boolean {
-        Log.d(TAG, "isAdEnable: " + OzAdsManager.getInstance().enableAd.value)
         return OzAdsManager.getInstance().enableAd.value
     }
 

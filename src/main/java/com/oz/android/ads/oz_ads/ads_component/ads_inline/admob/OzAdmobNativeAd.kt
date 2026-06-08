@@ -227,6 +227,10 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
     override fun onResumeAd() {
         // Native ads generally don't need explicit resume handling
         Log.d(TAG, "Resuming native ads (no-op)")
-        visibility = VISIBLE
+        if (isAdEnable()) {
+            visibility = VISIBLE
+        } else {
+            visibility = GONE
+        }
     }
 }

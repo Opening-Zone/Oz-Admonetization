@@ -196,6 +196,11 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
      * Resume ad (gọi trong onResume của Activity/Fragment)
      */
     fun resume() {
+        if (!isAdEnable()) {
+            isVisible = false
+            onResumeAd()
+            return
+        }
         isVisible = true
         adKey?.let { key ->
             if (isAdEnable()) {
