@@ -4,10 +4,12 @@
 
 # OzAds - Android Ad Integration Library
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.21-blue.svg?style=flat&logo=kotlin)](https://kotlinlang.org)
+[![Maven Central](https://img.shields.io/maven-central/v/com.opening-zone.software/android-ads)](https://central.sonatype.com/artifact/com.opening-zone.software/android-ads)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Opening-Zone/oz.mobile.ad_monetization/publish.yml?branch=main)](https://github.com/Opening-Zone/oz.mobile.ad_monetization/actions)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.0-blue.svg?style=flat&logo=kotlin)](https://kotlinlang.org)
 [![API](https://img.shields.io/badge/API-24%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=24)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE.txt)
-[![AdMob](https://img.shields.io/badge/AdMob-24.9.0-red.svg)](https://developers.google.com/admob/android/quick-start)
+[![AdMob](https://img.shields.io/badge/AdMob-25.0.0-red.svg)](https://developers.google.com/admob/android/quick-start)
 
 **A powerful, easy-to-use wrapper library for integrating AdMob ads into your Android applications**
 
