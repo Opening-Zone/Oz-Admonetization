@@ -148,8 +148,22 @@ afterEvaluate {
                 url = uri(layout.buildDirectory.dir("repo"))
             }
 
+            // GitHub Packages Repository (linked to Opening-Zone/oz.mobile.ad_monetization)
+            val ghUsername = getPublishProperty("GITHUB_USERNAME")
+            val ghToken = getPublishProperty("GITHUB_TOKEN")
+            if (ghUsername.isNotEmpty() && ghToken.isNotEmpty()) {
+                maven {
+                    name = "GitHubPackages"
+                    url = uri("https://maven.pkg.github.com/Opening-Zone/oz.mobile.ad_monetization")
+                    credentials {
+                        username = ghUsername
+                        password = ghToken
+                    }
+                }
+            }
+
             val repoUrl = getPublishProperty("PUBLISH_REPO_URL")
-            if (repoUrl.isNotEmpty() && !repoUrl.contains("central.sonatype.com")) {
+            if (repoUrl.isNotEmpty() && !repoUrl.contains("central.sonatype.com") && !repoUrl.contains("maven.pkg.github.com")) {
                 maven {
                     url = uri(repoUrl)
                     credentials {
