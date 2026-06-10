@@ -3,6 +3,7 @@ name: Build & Publish
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
 
@@ -27,3 +28,33 @@ jobs:
 
       - name: Compile and Test Library
         run: ./gradlew build
+
+  publish:
+    name: Publish to Sonatype Central
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant Execute Permission to Gradlew
+        run: chmod +x gradlew
+
+      - name: Publish Bundle to Sonatype Central
+        run: ./gradlew publish
+        env:
+          ORG_GRADLE_PROJECT_PUBLISH_REPO_URL: "https://central.sonatype.com/api/v1/publisher/deployments"
+          ORG_GRADLE_PROJECT_PUBLISH_REPO_USERNAME: ${{ secrets.PUBLISH_REPO_USERNAME }}
+          ORG_GRADLE_PROJECT_PUBLISH_REPO_PASSWORD: ${{ secrets.PUBLISH_REPO_PASSWORD }}
+          ORG_GRADLE_PROJECT_signing.keyId: ${{ secrets.GPG_KEY_ID }}
+          ORG_GRADLE_PROJECT_signing.key: ${{ secrets.GPG_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signing.password: ${{ secrets.GPG_PASSPHRASE }}
