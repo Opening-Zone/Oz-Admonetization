@@ -59,18 +59,31 @@ OzAds is a comprehensive Android library that simplifies ad integration by provi
 
 ## 📦 Installation
 
-### Step 1: Add Dependencies
+### Step 1: Add Maven Central Repository
+Ensure that `mavenCentral()` is declared in your repositories block in your `settings.gradle.kts` (or root `build.gradle.kts`):
 
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral() // Required for Opening Zone Ads
+    }
+}
+```
+
+### Step 2: Add Library Dependency
 Add the library to your module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    // OzAds Library
-    implementation("com.oz.android:oz-ads:1.0.1") // Update with actual version
+    // Opening Zone Ads Library
+    implementation("com.opening-zone.software:android-ads:1.0.0")
     
     // Required dependencies (if not already included)
-    implementation("com.google.android.gms:play-services-ads:24.9.0")
+    implementation("com.google.android.gms:play-services-ads:25.0.0")
+    implementation("com.google.android.ump:user-messaging-platform:4.0.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.10.0")
 }
 ```
 

@@ -1,1 +1,13 @@
-/build
+# Gradle files
+.gradle/
+/build/
+
+# IDE files
+.idea/
+*.iml
+
+# Local configuration files (contains sensitive credentials and SDK path)
+/local.properties
+
+# OS files
+.DS_Store
