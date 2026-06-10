@@ -6,6 +6,7 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
   build:
@@ -32,7 +33,7 @@ jobs:
   publish:
     name: Publish to Sonatype Central
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
