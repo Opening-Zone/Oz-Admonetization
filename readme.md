@@ -79,7 +79,7 @@ Add the library to your module's `build.gradle.kts`:
 ```kotlin
 dependencies {
     // Opening Zone Ads Library
-    implementation("com.opening-zone.software:android-ads:1.0.2")
+    implementation("com.opening-zone.software:android-ads:1.0.3")
     
     // Required dependencies (if not already included)
     implementation("com.google.android.gms:play-services-ads:25.0.0")
