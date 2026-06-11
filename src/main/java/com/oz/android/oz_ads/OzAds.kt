@@ -312,6 +312,7 @@ abstract class OzAds<AdType> : ViewGroup {
      * Destroy ad for a specific key
      * @param key Key of the ad to destroy
      */
+    @Suppress("UNCHECKED_CAST")
     protected fun onDestroyAd(key: String) {
         (OzAdsManager.getInstance().removeAd(key) as? AdType)?.let { ad ->
             destroyAd(ad)

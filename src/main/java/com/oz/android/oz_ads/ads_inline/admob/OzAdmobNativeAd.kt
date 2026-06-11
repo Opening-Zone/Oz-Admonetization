@@ -176,12 +176,6 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
             }
         }
 
-        if (nativeAdView == null) {
-            Log.e(TAG, "NativeAdView not set for key: $key")
-            onAdShowFailed(key, "NativeAdView not set")
-            return
-        }
-
         Log.d(TAG, "Showing native ad for key: $key")
         // Show native ad in this ViewGroup
         ad.show(this, nativeAdView)
