@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.publish.PublishingExtension
 import java.util.Properties
+import java.util.Base64
 import java.io.ByteArrayOutputStream
 
 plugins {
@@ -226,6 +227,7 @@ tasks.register("publishBundleToSonatype") {
         }
         
         println("Uploading bundle ${zipFile.name} to Sonatype Central...")
+        val base64Auth = Base64.getEncoder().encodeToString("$username:$password".toByteArray())
         val outputStream = ByteArrayOutputStream()
         val errorStream = ByteArrayOutputStream()
         
@@ -233,7 +235,7 @@ tasks.register("publishBundleToSonatype") {
             commandLine(
                 "curl", "-s", "-w", "\nHTTP_STATUS:%{http_code}",
                 "-X", "POST",
-                "-u", "$username:$password",
+                "-H", "Authorization: Bearer $base64Auth",
                 "-F", "bundle=@${zipFile.absolutePath}",
                 "https://central.sonatype.com/api/v1/publisher/upload?publishingType=AUTOMATIC"
             )
