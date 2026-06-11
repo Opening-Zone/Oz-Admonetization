@@ -175,17 +175,18 @@ afterEvaluate {
             }
         }
         
+        val gpgKeyId = System.getenv("SIGNING_KEY_ID") ?: getPublishProperty("signing.keyId")
+        val gpgKey = System.getenv("SIGNING_KEY") ?: getPublishProperty("signing.key")
+        val gpgPassword = System.getenv("SIGNING_PASSWORD") ?: getPublishProperty("signing.password")
+
+        val hasInMemoryKey = gpgKey.isNotEmpty() && gpgPassword.isNotEmpty()
         val hasGpgCmd = project.hasProperty("signing.gnupg.keyName")
-        val hasInMemoryKey = project.hasProperty("signing.key") && project.hasProperty("signing.password")
         val hasSigningKey = project.hasProperty("signing.keyId") || 
                              project.hasProperty("signing.secretKeyRingFile")
                              
         val signing = extensions.getByType<org.gradle.plugins.signing.SigningExtension>()
         if (hasInMemoryKey) {
-            val keyId = getPublishProperty("signing.keyId")
-            val key = getPublishProperty("signing.key")
-            val password = getPublishProperty("signing.password")
-            signing.useInMemoryPgpKeys(keyId, key, password)
+            signing.useInMemoryPgpKeys(gpgKeyId, gpgKey, gpgPassword)
             signing.sign(extensions.getByType<PublishingExtension>().publications["release"])
         } else if (hasGpgCmd) {
             signing.useGpgCmd()
