@@ -11,7 +11,7 @@ plugins {
 }
 
 android {
-    namespace = "com.oz.android.ads"
+    namespace = "com.oz.android.ads_core"
     compileSdk {
         version = release(36)
     }

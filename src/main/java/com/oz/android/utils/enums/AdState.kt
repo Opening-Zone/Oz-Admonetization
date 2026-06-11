@@ -1,11 +1,11 @@
 package com.oz.android.utils.enums
 
 /**
- * Enum định nghĩa các state của ad
+ * Enum defining ad states
  */
 enum class AdState {
-    IDLE,      // Default state, chưa có action nào
-    LOADING,   // Đang load ad từ mediation
-    LOADED,    // Ad đã load thành công, sẵn sàng để show
-    SHOWING    // Ad đang được hiển thị
+    IDLE,      // Default state, no action taken yet
+    LOADING,   // Ad is loading from mediation
+    LOADED,    // Ad loaded successfully, ready to show
+    SHOWING    // Ad is currently showing
 }

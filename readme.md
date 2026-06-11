@@ -79,7 +79,7 @@ Add the library to your module's `build.gradle.kts`:
 ```kotlin
 dependencies {
     // Opening Zone Ads Library
-    implementation("com.opening-zone.software:android-ads:1.0.0")
+    implementation("com.opening-zone.software:android-ads:1.0.1")
     
     // Required dependencies (if not already included)
     implementation("com.google.android.gms:play-services-ads:25.0.0")
@@ -117,7 +117,7 @@ Add your AdMob App ID to your `AndroidManifest.xml`:
 Initialize the library in your `Application` class or main `Activity`:
 
 ```kotlin
-import com.oz.android.wrapper.OzAdsManager
+import com.oz.android.OzAdsManager
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
@@ -153,7 +153,7 @@ class MainActivity : AppCompatActivity() {
 
 #### XML Layout
 ```xml
-<com.oz.android.wrapper.OzAdmobBannerAd
+<com.oz.android.oz_ads.ads_inline.admob.OzAdmobBannerAd
     android:id="@+id/banner_ad"
     android:layout_width="match_parent"
     android:layout_height="wrap_content" />
@@ -297,7 +297,7 @@ Create a custom native ad layout (e.g., `layout_native_ad.xml`):
 #### XML Usage
 
 ```xml
-<com.oz.android.wrapper.OzAdmobNativeAd
+<com.oz.android.oz_ads.ads_inline.admob.OzAdmobNativeAd
     android:id="@+id/native_ad"
     android:layout_width="match_parent"
     android:layout_height="wrap_content" />
