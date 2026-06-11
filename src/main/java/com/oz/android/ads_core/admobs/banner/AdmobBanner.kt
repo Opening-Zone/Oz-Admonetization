@@ -310,9 +310,18 @@ class AdmobBanner(
             (displayMetrics.widthPixels / density).toInt()
         }
 
-        // Use anchored adaptive banner - it automatically determines the best height
-        // that fits within the container while maximizing ad performance
-        val adSize = AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, widthDp)
+        // Check container layout height for adaptive ad size
+        val heightParams = container?.layoutParams?.height ?: android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        val adSize = if (heightParams == android.view.ViewGroup.LayoutParams.WRAP_CONTENT) {
+            AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(context, widthDp)
+        } else {
+            val heightDp = (heightParams / density).toInt()
+            if (heightDp > 32) {
+                AdSize.getInlineAdaptiveBannerAdSize(widthDp, heightDp)
+            } else {
+                AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(context, widthDp)
+            }
+        }
         
         Log.d(TAG, "AdSize calculated: ${adSize.width}dp x ${adSize.height}dp (${adSize.getHeightInPixels(context)}px)")
         

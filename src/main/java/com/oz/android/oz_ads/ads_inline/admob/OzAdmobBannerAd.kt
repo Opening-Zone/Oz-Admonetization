@@ -135,8 +135,17 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
         Log.d(TAG, "Setting shimmer size from container: ${width}px (${widthDp}dp)")
         
         // Use the same logic as AdmobBanner.calculateAdSize()
-        // Use anchored adaptive banner - it automatically determines the best height
-        val adSize = AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, widthDp)
+        val heightParams = layoutParams?.height ?: android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        val adSize = if (heightParams == android.view.ViewGroup.LayoutParams.WRAP_CONTENT) {
+            AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(context, widthDp)
+        } else {
+            val heightDp = (heightParams / density).toInt()
+            if (heightDp > 32) {
+                AdSize.getInlineAdaptiveBannerAdSize(widthDp, heightDp)
+            } else {
+                AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(context, widthDp)
+            }
+        }
         val heightPx = adSize.getHeightInPixels(context)
         
         // Set shimmer height to match the ad size
