@@ -134,9 +134,9 @@ class AppResumeInterstitialManager private constructor() :
                 adListener?.onAdDismissedFullScreenContent()
             }
 
-            override fun onAdFailedToShowFullScreenContent(error: OzAdError) {
-                Log.e(TAG, "Failed to show interstitial: ${error.message}")
-                adListener?.onAdFailedToShowFullScreenContent(error)
+            override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
+                Log.e(TAG, "Failed to show interstitial: ${adError.message}")
+                adListener?.onAdFailedToShowFullScreenContent(adError)
             }
         }
     }

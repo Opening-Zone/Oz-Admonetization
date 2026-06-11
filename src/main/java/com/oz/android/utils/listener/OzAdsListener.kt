@@ -30,7 +30,7 @@ abstract class OzAdListener<AdType> {
     open fun onAdDismissedFullScreenContent() {}
 
     // Changed AdError to OzAdError
-    open fun onAdFailedToShowFullScreenContent(error: OzAdError) {}
+    open fun onAdFailedToShowFullScreenContent(adError: OzAdError) {}
 
     /**
      * Operator overloading to combine two listeners.
@@ -74,9 +74,9 @@ abstract class OzAdListener<AdType> {
                 second.onAdDismissedFullScreenContent()
             }
 
-            override fun onAdFailedToShowFullScreenContent(error: OzAdError) {
-                first.onAdFailedToShowFullScreenContent(error)
-                second.onAdFailedToShowFullScreenContent(error)
+            override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
+                first.onAdFailedToShowFullScreenContent(adError)
+                second.onAdFailedToShowFullScreenContent(adError)
             }
 
             override fun onNextAction() {

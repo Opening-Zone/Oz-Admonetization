@@ -110,9 +110,9 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
                 this@OzAdmobOpenAd.onAdDismissed(key)
             }
 
-            override fun onAdFailedToShowFullScreenContent(error: OzAdError) {
+            override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
                 // Bridge to OzAds.onAdShowFailed() - handles state management
-                this@OzAdmobOpenAd.onAdShowFailed(key, error.message)
+                this@OzAdmobOpenAd.onAdShowFailed(key, adError.message)
             }
 
             override fun onAdClicked() {
