@@ -14,5 +14,6 @@ data class OzAdsConfig(
     val overlayAdGapTimeMs: Long = 30_000L,
     val testDeviceIds: List<String> = emptyList(),
     val isDebugMode: Boolean = false,
-    val offAdsOnPause: Boolean = true
+    val offAdsOnPause: Boolean = true,
+    val adsCoreType: AdsCoreType = AdsCoreType.ADMOB_NEXT_GEN
 )

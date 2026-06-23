@@ -123,7 +123,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
 
         val mergedListener = openListener.merge(listener)
 
-        return AdmobAppOpen(context, adUnitId, mergedListener)
+        return AdmobAppOpen.create(context, adUnitId, mergedListener)
     }
 
     /**

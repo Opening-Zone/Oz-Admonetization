@@ -140,7 +140,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
 
         val mergedListener = intersListener.merge(listener)
 
-        return AdmobInterstitial(context, adUnitId, mergedListener)
+        return AdmobInterstitial.create(context, adUnitId, mergedListener)
     }
 
     /**

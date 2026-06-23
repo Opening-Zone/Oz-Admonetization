@@ -21,7 +21,8 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : InlineAds<AdmobBanner>(context, attrs, defStyleAttr) {
 
-    private var banner:AdmobBanner = AdmobBanner(context, "", null)
+    private var currentAdUnitId: String = ""
+    private var collapsiblePosition: String? = null
 
     companion object {
         private const val TAG = "OzAdmobBannerAd"
@@ -34,7 +35,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      */
     fun setAdUnitId(key: String, adUnitId: String) {
         setPreloadKey(key)
-        banner.adUnitId = adUnitId
+        this.currentAdUnitId = adUnitId
         Log.d(TAG, "Ad unit ID set for key: $key -> $adUnitId")
     }
 
@@ -43,7 +44,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      * @param position "top" or "bottom" for collapse button position
      */
     fun setCollapsible(position: String) {
-        banner.setCollapsible(position)
+        this.collapsiblePosition = position
         Log.d(TAG, "Collapsible banner enabled at: $position")
     }
 
@@ -51,7 +52,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      * Enable collapsible banner at top
      */
     fun setCollapsibleTop() {
-        banner.setCollapsibleTop()
+        this.collapsiblePosition = "top"
         Log.d(TAG, "Collapsible banner enabled at top")
     }
 
@@ -59,7 +60,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      * Enable collapsible banner at bottom
      */
     fun setCollapsibleBottom() {
-        banner.setCollapsibleBottom()
+        this.collapsiblePosition = "bottom"
         Log.d(TAG, "Collapsible banner enabled at bottom")
     }
 
@@ -67,12 +68,12 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      * Disable collapsible banner
      */
     fun disableCollapsible() {
-        banner.setCollapsible(null)
+        this.collapsiblePosition = null
         Log.d(TAG, "Collapsible banner disabled")
     }
 
     override fun createAd(key: String): AdmobBanner? {
-        val adUnitId = banner.adUnitId
+        val adUnitId = currentAdUnitId
         if (adUnitId.isBlank()) {
             Log.e(TAG, "Ad unit ID not set for key: $key")
             return null
@@ -99,7 +100,9 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
         val mergedListener = bannerListener.merge(listener)
 
-        return AdmobBanner(context, adUnitId, mergedListener)
+        return AdmobBanner.create(context, adUnitId, mergedListener).apply {
+            setCollapsible(collapsiblePosition)
+        }
     }
 
     override fun onLoadAd(key: String, ad: AdmobBanner) {

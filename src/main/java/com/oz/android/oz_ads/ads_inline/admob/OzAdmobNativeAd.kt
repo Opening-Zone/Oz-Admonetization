@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
-import com.google.android.gms.ads.nativead.NativeAdView
 import com.oz.android.ads_core.R
 import com.oz.android.utils.listener.OzAdListener
 import com.oz.android.ads_core.admobs.native_advanced.AdmobNativeAdvanced
@@ -33,8 +32,8 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
         Log.d(TAG, "setMediaRatio: $ratio")
     }
 
-    // Map key -> NativeAdView
-    private val nativeAdViews = ConcurrentHashMap<String, NativeAdView>()
+    // Map key -> View
+    private val nativeAdViews = ConcurrentHashMap<String, android.view.View>()
 
     // Map key -> Layout ID
     private var layoutId = 0
@@ -53,9 +52,9 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
     /**
      * Set NativeAdView for a key
      * @param key Key to identify the placement
-     * @param nativeAdView Pre-setup NativeAdView
+     * @param nativeAdView Pre-setup View
      */
-    fun setNativeAdView(key: String, nativeAdView: NativeAdView) {
+    fun setNativeAdView(key: String, nativeAdView: android.view.View) {
         nativeAdViews[key] = nativeAdView
         Log.d(TAG, "NativeAdView set for key: $key")
     }
@@ -100,7 +99,7 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
 
         val mergedListener = nativeListener.merge(listener)
 
-        return AdmobNativeAdvanced(context, adUnitId, mergedListener).apply {
+        return AdmobNativeAdvanced.create(context, adUnitId, mergedListener).apply {
             this@OzAdmobNativeAd.mediaAspectRatio?.let { setMediaRatio(it) }
         }
     }
@@ -156,19 +155,12 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
         // If no NativeAdView exists, check if layoutId is set
         if (nativeAdView == null) {
             val resId = layoutId
-            Log.d(TAG, "Inflating NativeAdView from layout ID: $resId")
+            Log.d(TAG, "Inflating native ad view from layout ID: $resId")
             try {
                 val inflatedView = LayoutInflater.from(context).inflate(resId, this, false)
-                if (inflatedView is NativeAdView) {
-                    nativeAdView = inflatedView
-                    bindStandardViews(nativeAdView)
-                    // Cache for subsequent uses
-                    nativeAdViews[key] = nativeAdView
-                } else {
-                    Log.e(TAG, "Inflated view is not a NativeAdView")
-                    onAdShowFailed(key, "Inflated view is not a NativeAdView")
-                    return
-                }
+                nativeAdView = inflatedView
+                // Cache for subsequent uses
+                nativeAdViews[key] = nativeAdView
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to inflate layout: ${e.message}")
                 onAdShowFailed(key, "Failed to inflate layout: ${e.message}")
@@ -181,21 +173,6 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
         ad.show(this, nativeAdView)
         // Notify parent that the ad has been shown
         onAdShown(key)
-    }
-
-    /**
-     * Bind child views in NativeAdView based on standard IDs (compatible with layout_native_large.xml)
-     */
-    private fun bindStandardViews(nativeAdView: NativeAdView) {
-        nativeAdView.headlineView = nativeAdView.findViewById(R.id.ad_headline)
-        nativeAdView.bodyView = nativeAdView.findViewById(R.id.ad_body)
-        nativeAdView.callToActionView = nativeAdView.findViewById(R.id.ad_call_to_action)
-        nativeAdView.iconView = nativeAdView.findViewById(R.id.ad_app_icon)
-        nativeAdView.priceView = nativeAdView.findViewById(R.id.ad_price)
-        nativeAdView.starRatingView = nativeAdView.findViewById(R.id.ad_stars)
-        nativeAdView.storeView = nativeAdView.findViewById(R.id.ad_store)
-        nativeAdView.advertiserView = nativeAdView.findViewById(R.id.ad_advertiser)
-        nativeAdView.mediaView = nativeAdView.findViewById(R.id.ad_media)
     }
 
     override fun hideAds() {

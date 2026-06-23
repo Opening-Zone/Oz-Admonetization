@@ -50,6 +50,8 @@ android {
         }
     }
 
+
+
     //noinspection UseTomlInstead
     dependencies {
         // AndroidX
@@ -65,8 +67,12 @@ android {
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
         // Google Play Services Ads + UMP
-        implementation("com.google.android.gms:play-services-ads:25.0.0")
-        implementation("com.google.android.ump:user-messaging-platform:4.0.0")
+        api("com.google.android.gms:play-services-ads:25.4.0")
+        api("com.google.android.ump:user-messaging-platform:4.0.0")
+        api("com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk:1.2.1") {
+            exclude(group = "com.google.android.gms", module = "play-services-ads-api")
+        }
+
 
         // Shimmer
         implementation("io.github.usefulness:shimmer-android-core:1.0.0")

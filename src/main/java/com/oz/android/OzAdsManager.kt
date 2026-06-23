@@ -4,7 +4,14 @@ import android.app.Activity
 import com.oz.android.ads_core.admobs.AdMobManager
 import com.oz.android.utils.enums.AdState
 import com.oz.android.utils.config.OzAdsConfig
+import com.oz.android.utils.config.AdsCoreType
 import com.oz.android.utils.listener.OzAdsResult
+import android.util.Log
+import com.google.android.libraries.ads.mobile.sdk.MobileAds
+import com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -148,7 +155,15 @@ class OzAdsManager private constructor(
     }
 
     fun executePendingShow(key: String) {
-        pendingShows.remove(key)?.invoke()
+        pendingShows.remove(key)?.let { runnable ->
+            if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+                runnable.invoke()
+            } else {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    runnable.invoke()
+                }
+            }
+        }
     }
 
     fun clearPendingShow(key: String) {
@@ -166,20 +181,99 @@ class OzAdsManager private constructor(
      * @param onSuccess Optional callback
      * @param onError Optional callback
      */
+    private fun getAdMobAppId(context: android.content.Context): String? {
+        return try {
+            val appInfo = context.packageManager.getApplicationInfo(
+                context.packageName,
+                android.content.pm.PackageManager.GET_META_DATA
+            )
+            appInfo.metaData?.getString("com.google.android.gms.ads.APPLICATION_ID")
+        } catch (e: Exception) {
+            Log.e("OzAdsManager", "Failed to load AdMob App ID from manifest", e)
+            null
+        }
+    }
+
     suspend fun init(
         activity: Activity,
         onSuccess: (() -> Unit)? = null,
         onError: ((Throwable) -> Unit)? = null
     ): OzAdsResult<Unit> = suspendCancellableCoroutine { continuation ->
-        // Use testDeviceIds from the stored config
-        adMobManager.initializeMobileAdsSdk(config.testDeviceIds, activity) {
-            initialized = true
-            continuation.resume(OzAdsResult.Success(Unit))
-            onSuccess?.invoke()
+        if (config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {
+            val appId = getAdMobAppId(activity) ?: "ca-app-pub-3940256099942544~3347511713"
+            Log.d("OzAdsManager", "Initializing Next-Gen Mobile Ads SDK with App ID: $appId")
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    MobileAds.initialize(
+                        activity,
+                        InitializationConfig.Builder(appId).build()
+                    ) {
+                        initialized = true
+                        continuation.resume(OzAdsResult.Success(Unit))
+                        onSuccess?.invoke()
+                    }
+                } catch (e: Throwable) {
+                    initialized = false
+                    continuation.resume(OzAdsResult.Failure(e))
+                    onError?.invoke(e)
+                }
+            }
+        } else {
+            // Use testDeviceIds from the stored config
+            adMobManager.initializeMobileAdsSdk(config.testDeviceIds, activity) {
+                initialized = true
+                continuation.resume(OzAdsResult.Success(Unit))
+                onSuccess?.invoke()
+            }
         }
     }
 
     fun isAdInitialized(): Boolean = initialized
+
+    fun openAdInspector(context: android.content.Context) {
+        if (config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {
+            try {
+                MobileAds.openAdInspector { error ->
+                    if (error != null) {
+                        Log.e("OzAdsManager", "Next-Gen Ad Inspector closed with error: ${error.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("OzAdsManager", "Failed to open Next-Gen Ad Inspector", e)
+            }
+        } else {
+            try {
+                val mobileAdsClass = Class.forName("com.google.android.gms.ads.MobileAds")
+                val listenerClass = Class.forName("com.google.android.gms.ads.OnAdInspectorClosedListener")
+                val proxyListener = java.lang.reflect.Proxy.newProxyInstance(
+                    listenerClass.classLoader,
+                    arrayOf(listenerClass)
+                ) { _, method, args ->
+                    if (method.name == "onAdInspectorClosed") {
+                        val error = args[0]
+                        if (error != null) {
+                            try {
+                                val getMessageMethod = error.javaClass.getMethod("getMessage")
+                                val message = getMessageMethod.invoke(error) as? String
+                                Log.e("OzAdsManager", "Standard Ad Inspector error: $message")
+                            } catch (ex: Exception) {
+                                Log.e("OzAdsManager", "Standard Ad Inspector closed with error")
+                            }
+                        }
+                    }
+                    null
+                }
+                val openAdInspectorMethod = mobileAdsClass.getMethod(
+                    "openAdInspector",
+                    android.content.Context::class.java,
+                    listenerClass
+                )
+                openAdInspectorMethod.invoke(null, context, proxyListener)
+            } catch (e: Exception) {
+                Log.e("OzAdsManager", "Failed to open standard AdMob Ad Inspector reflectively", e)
+            }
+        }
+    }
 
     companion object {
         @Volatile

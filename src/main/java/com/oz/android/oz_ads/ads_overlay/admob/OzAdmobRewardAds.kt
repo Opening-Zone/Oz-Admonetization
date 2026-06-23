@@ -150,7 +150,7 @@ open class OzAdmobRewardAds @JvmOverloads constructor(
 
         val mergedListener = rewardListener.merge(listener)
 
-        return AdmobReward(context, adUnitId, mergedListener)
+        return AdmobReward.create(context, adUnitId, mergedListener)
     }
 
     /**

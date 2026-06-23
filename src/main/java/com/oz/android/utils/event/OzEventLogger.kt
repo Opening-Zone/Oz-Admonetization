@@ -73,4 +73,21 @@ object OzEventLogger {
         // Logging manually ensures it appears if auto-collection is off.
         FirebaseAnalytics.getInstance(context).logEvent("ad_click", params)
     }
+
+    fun logPaidAdImpressionNextGen(
+        context: Context,
+        valueMicros: Long,
+        currencyCode: String,
+        adUnitId: String,
+        adapterClassName: String
+    ) {
+        // Next-Gen doesn't expose precision, so we pass 0 (UNKNOWN)
+        logEventWithAds(
+            context,
+            valueMicros.toFloat(),
+            0,
+            adUnitId,
+            adapterClassName
+        )
+    }
 }

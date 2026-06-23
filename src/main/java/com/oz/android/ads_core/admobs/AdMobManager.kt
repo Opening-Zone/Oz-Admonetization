@@ -2,13 +2,11 @@ package com.oz.android.ads_core.admobs
 
 import android.content.Context
 import android.util.Log
-import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.RequestConfiguration
 import java.util.concurrent.atomic.AtomicBoolean
+import java.lang.reflect.Proxy
 
 /**
- * Manager class for handling AdMob ads
- * Following Single Responsibility Principle - only handles AdMob initialization
+ * Manager class for handling AdMob ads (Standard GMS SDK)
  */
 class AdMobManager private constructor() {
 
@@ -32,7 +30,7 @@ class AdMobManager private constructor() {
         }
     }
 
-    public fun initializeMobileAdsSdk(
+    fun initializeMobileAdsSdk(
         testDeviceList: List<String>,
         context: Context,
         onComplete: () -> Unit
@@ -41,21 +39,49 @@ class AdMobManager private constructor() {
             return
         }
 
-        MobileAds.initialize(context) { initializationStatus ->
-            val statusMap = initializationStatus.adapterStatusMap
-            statusMap.forEach { (adapterClass, status) ->
-                Log.d(
-                    TAG,
-                    "Adapter name: $adapterClass, Description: ${status.description}, Latency: ${status.latency}"
-                )
+        try {
+            val mobileAdsClass = Class.forName("com.google.android.gms.ads.MobileAds")
+            val listenerClass = Class.forName("com.google.android.gms.ads.initialization.OnInitializationCompleteListener")
+            
+            val proxyListener = Proxy.newProxyInstance(
+                listenerClass.classLoader,
+                arrayOf(listenerClass)
+            ) { _, method, _ ->
+                if (method.name == "onInitializationComplete") {
+                    onComplete()
+                }
+                null
             }
+
+            val initializeMethod = mobileAdsClass.getMethod(
+                "initialize",
+                Context::class.java,
+                listenerClass
+            )
+            
+            initializeMethod.invoke(null, context, proxyListener)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize GMS MobileAds reflectively", e)
             onComplete()
         }
 
-        val requestConfiguration = RequestConfiguration.Builder()
-            .setTestDeviceIds(testDeviceList)
-            .build()
-        MobileAds.setRequestConfiguration(requestConfiguration)
+        try {
+            val builderClass = Class.forName("com.google.android.gms.ads.RequestConfiguration\$Builder")
+            val builderInstance = builderClass.getDeclaredConstructor().newInstance()
+            val setTestDeviceIdsMethod = builderClass.getMethod("setTestDeviceIds", List::class.java)
+            setTestDeviceIdsMethod.invoke(builderInstance, testDeviceList)
+            val buildMethod = builderClass.getMethod("build")
+            val requestConfiguration = buildMethod.invoke(builderInstance)
+            
+            val mobileAdsClass = Class.forName("com.google.android.gms.ads.MobileAds")
+            val setRequestConfigurationMethod = mobileAdsClass.getMethod(
+                "setRequestConfiguration",
+                Class.forName("com.google.android.gms.ads.RequestConfiguration")
+            )
+            setRequestConfigurationMethod.invoke(null, requestConfiguration)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set GMS RequestConfiguration reflectively", e)
+        }
     }
 
     fun isInitialized(): Boolean {
