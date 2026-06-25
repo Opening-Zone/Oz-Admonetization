@@ -209,9 +209,10 @@ class OzAdsManager private constructor(
                         InitializationConfig.Builder(appId).build()
                     ) {
                         initialized = true
-                        continuation.resume(OzAdsResult.Success(Unit))
                         onSuccess?.invoke()
                     }
+                    initialized = true
+                    continuation.resume(OzAdsResult.Success(Unit))
                 } catch (e: Throwable) {
                     initialized = false
                     continuation.resume(OzAdsResult.Failure(e))
@@ -222,9 +223,9 @@ class OzAdsManager private constructor(
             // Use testDeviceIds from the stored config
             adMobManager.initializeMobileAdsSdk(config.testDeviceIds, activity) {
                 initialized = true
-                continuation.resume(OzAdsResult.Success(Unit))
                 onSuccess?.invoke()
             }
+            continuation.resume(OzAdsResult.Success(Unit))
         }
     }
 
