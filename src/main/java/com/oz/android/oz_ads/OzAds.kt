@@ -83,6 +83,11 @@ abstract class OzAds<AdType> : ViewGroup {
             return
         }
 
+        if (!OzAdsManager.getInstance().isAdInitialized()) {
+            Log.w(TAG, "OzAdsManager is not initialized. Cannot load ad for key: $key")
+            return
+        }
+
         val currentState = getAdState(key)
 
         when (currentState) {
@@ -143,6 +148,12 @@ abstract class OzAds<AdType> : ViewGroup {
         if (!isAdEnable()) {
             Log.d(TAG, "Should not show ad, skipping showAds() for key: $key")
             setAdState(key, AdState.IDLE)
+            return
+        }
+
+        if (!OzAdsManager.getInstance().isAdInitialized()) {
+            Log.w(TAG, "OzAdsManager is not initialized. Cannot show ad for key: $key")
+            onAdShowFailed(key, "OzAdsManager is not initialized")
             return
         }
 
