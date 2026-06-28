@@ -2,6 +2,7 @@ package com.oz.android.oz_ads.ads_overlay
 
 import com.oz.android.ads_core.R
 import android.app.Activity
+import android.os.Looper
 import android.app.Dialog
 import android.content.Context
 import android.util.AttributeSet
@@ -193,10 +194,17 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
      * Hide loading indicator
      */
     fun hideLoading() {
-        loadingDialog?.dismiss()
-        loadingDialog = null
-        loadingIndicator?.visibility = GONE
-        Log.d(TAG, "Loading indicator hidden")
+        val action = Runnable {
+            loadingDialog?.dismiss()
+            loadingDialog = null
+            loadingIndicator?.visibility = GONE
+            Log.d(TAG, "Loading indicator hidden")
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action.run()
+        } else {
+            post(action)
+        }
     }
 
     private fun showLoadingDialog(activity: Activity) {

@@ -301,13 +301,27 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
         }
     }
 
-    fun startShimmer(){
-        shimmerLayout?.visibility = VISIBLE
-        shimmerLayout?.startShimmer()
+    fun startShimmer() {
+        val action = Runnable {
+            shimmerLayout?.visibility = VISIBLE
+            shimmerLayout?.startShimmer()
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action.run()
+        } else {
+            refreshHandler.post(action)
+        }
     }
 
-    fun stopShimmer(){
-        shimmerLayout?.stopShimmer()
-        shimmerLayout?.visibility = GONE
+    fun stopShimmer() {
+        val action = Runnable {
+            shimmerLayout?.stopShimmer()
+            shimmerLayout?.visibility = GONE
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action.run()
+        } else {
+            refreshHandler.post(action)
+        }
     }
 }
