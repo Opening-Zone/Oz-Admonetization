@@ -2,19 +2,16 @@ package com.oz.android
 
 import android.app.Activity
 import com.oz.android.ads_core.admobs.AdMobManager
+import com.oz.android.ads_core.admobs.AdmobNextManager
 import com.oz.android.utils.enums.AdState
 import com.oz.android.utils.config.OzAdsConfig
 import com.oz.android.utils.config.AdsCoreType
 import com.oz.android.utils.listener.OzAdsResult
-import android.util.Log
-import com.google.android.libraries.ads.mobile.sdk.MobileAds
-import com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.oz.android.utils.OzLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 
@@ -28,6 +25,9 @@ class OzAdsManager private constructor(
 
     @Volatile
     private var initialized = false
+
+    // Signals awaitInitialization() callers when init() completes.
+    private val initDeferred = kotlinx.coroutines.CompletableDeferred<OzAdsResult<Unit>>()
 
     // 1. Centralized Configuration
     // We use a private backing field and expose an immutable getter
@@ -189,94 +189,96 @@ class OzAdsManager private constructor(
             )
             appInfo.metaData?.getString("com.google.android.gms.ads.APPLICATION_ID")
         } catch (e: Exception) {
-            Log.e("OzAdsManager", "Failed to load AdMob App ID from manifest", e)
+            OzLog.e("OzAdsManager", "Failed to load AdMob App ID from manifest", e)
             null
         }
     }
 
+    /**
+     * Initialize the Mobile Ads SDK.
+     * This should be called exactly once from MainActivity.
+     * Other callers (e.g. SplashFragment) should use [awaitInitialization] instead.
+     *
+     * @param activity The activity context used for initialization
+     * @param onSuccess Callback triggered when initialization completes successfully
+     * @param onError Callback triggered if initialization fails
+     */
     suspend fun init(
         activity: Activity,
         onSuccess: (() -> Unit)? = null,
         onError: ((Throwable) -> Unit)? = null
-    ): OzAdsResult<Unit> = suspendCancellableCoroutine { continuation ->
-        if (config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {
-            val appId = getAdMobAppId(activity) ?: "ca-app-pub-3940256099942544~3347511713"
-            Log.d("OzAdsManager", "Initializing Next-Gen Mobile Ads SDK with App ID: $appId")
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    MobileAds.initialize(
-                        activity,
-                        InitializationConfig.Builder(appId).build()
-                    ) {
-                        initialized = true
-                        onSuccess?.invoke()
-                    }
+    ): OzAdsResult<Unit> {
+        if (initialized) {
+            onSuccess?.invoke()
+            return OzAdsResult.Success(Unit)
+        }
+
+        val initStartTime = System.currentTimeMillis()
+        OzLog.d("OzAdsManager", "SDK initialization started...")
+
+        val result = suspendCancellableCoroutine<OzAdsResult<Unit>> { continuation ->
+            if (config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {
+                // PATH A: GMA Next-Gen SDK — delegates to AdmobNextManager
+                val appId = getAdMobAppId(activity) ?: "ca-app-pub-3940256099942544~3347511713"
+                AdmobNextManager.getInstance().initializeMobileAdsSdk(appId, activity) {
+                    val elapsed = System.currentTimeMillis() - initStartTime
+                    OzLog.d("OzAdsManager", "✅ SDK fully initialized in ${elapsed}ms (Next-Gen)")
                     initialized = true
-                    continuation.resume(OzAdsResult.Success(Unit))
-                } catch (e: Throwable) {
-                    initialized = false
-                    continuation.resume(OzAdsResult.Failure(e))
-                    onError?.invoke(e)
+                    onSuccess?.invoke()
+                    if (continuation.isActive) continuation.resume(OzAdsResult.Success(Unit))
+                }
+            } else {
+                // PATH B: Standard GMS AdMob SDK — delegates to AdMobManager
+                adMobManager.initializeMobileAdsSdk(config.testDeviceIds, activity) {
+                    val elapsed = System.currentTimeMillis() - initStartTime
+                    OzLog.d("OzAdsManager", "✅ SDK fully initialized in ${elapsed}ms (Standard GMS)")
+                    initialized = true
+                    onSuccess?.invoke()
+                    if (continuation.isActive) continuation.resume(OzAdsResult.Success(Unit))
                 }
             }
-        } else {
-            // Use testDeviceIds from the stored config
-            adMobManager.initializeMobileAdsSdk(config.testDeviceIds, activity) {
-                initialized = true
-                onSuccess?.invoke()
-            }
-            continuation.resume(OzAdsResult.Success(Unit))
         }
+
+        // Signal any awaitInitialization() callers that init is done.
+        initDeferred.complete(result)
+        return result
     }
 
     fun isAdInitialized(): Boolean = initialized
 
+    /**
+     * Suspend until [init] completes, or until [INIT_TIMEOUT_MS] elapses — whichever comes first.
+     *
+     * Intended for callers that do not own initialization (e.g. SplashFragment) but need the SDK
+     * to be reasonably ready before loading ads. After the timeout, ads proceed anyway — the SDK
+     * initialization continues in the background and will be fully ready for subsequent requests.
+     *
+     * - Returns immediately if already initialized.
+     * - Suspends for up to [INIT_TIMEOUT_MS] ms waiting for [init] to signal completion.
+     * - Returns [OzAdsResult.Success] regardless (either SDK ready, or timeout elapsed).
+     */
+    suspend fun awaitInitialization(): OzAdsResult<Unit> {
+        if (initialized) return OzAdsResult.Success(Unit)
+
+        val result = withTimeoutOrNull(INIT_TIMEOUT_MS) { initDeferred.await() }
+        if (result == null) {
+            OzLog.w("OzAdsManager", "SDK init timeout after ${INIT_TIMEOUT_MS}ms — proceeding to load ads. Init continues in background.")
+        }
+        return OzAdsResult.Success(Unit)
+    }
+
     fun openAdInspector(context: android.content.Context) {
         if (config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {
-            try {
-                MobileAds.openAdInspector { error ->
-                    if (error != null) {
-                        Log.e("OzAdsManager", "Next-Gen Ad Inspector closed with error: ${error.message}")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("OzAdsManager", "Failed to open Next-Gen Ad Inspector", e)
-            }
+            AdmobNextManager.getInstance().openAdInspector(context)
         } else {
-            try {
-                val mobileAdsClass = Class.forName("com.google.android.gms.ads.MobileAds")
-                val listenerClass = Class.forName("com.google.android.gms.ads.OnAdInspectorClosedListener")
-                val proxyListener = java.lang.reflect.Proxy.newProxyInstance(
-                    listenerClass.classLoader,
-                    arrayOf(listenerClass)
-                ) { _, method, args ->
-                    if (method.name == "onAdInspectorClosed") {
-                        val error = args[0]
-                        if (error != null) {
-                            try {
-                                val getMessageMethod = error.javaClass.getMethod("getMessage")
-                                val message = getMessageMethod.invoke(error) as? String
-                                Log.e("OzAdsManager", "Standard Ad Inspector error: $message")
-                            } catch (ex: Exception) {
-                                Log.e("OzAdsManager", "Standard Ad Inspector closed with error")
-                            }
-                        }
-                    }
-                    null
-                }
-                val openAdInspectorMethod = mobileAdsClass.getMethod(
-                    "openAdInspector",
-                    android.content.Context::class.java,
-                    listenerClass
-                )
-                openAdInspectorMethod.invoke(null, context, proxyListener)
-            } catch (e: Exception) {
-                Log.e("OzAdsManager", "Failed to open standard AdMob Ad Inspector reflectively", e)
-            }
+            adMobManager.openAdInspector(context)
         }
     }
 
     companion object {
+        /** Maximum time to wait for SDK initialization before proceeding to load ads anyway. */
+        private const val INIT_TIMEOUT_MS = 5_000L
+
         @Volatile
         private var instance: OzAdsManager? = null
 

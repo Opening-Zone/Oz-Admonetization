@@ -14,6 +14,7 @@ import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback
 import com.google.android.libraries.ads.mobile.sdk.common.FullScreenContentError
 import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
 import com.google.android.libraries.ads.mobile.sdk.common.AdValue
+import com.google.android.libraries.ads.mobile.sdk.common.VideoOptions
 import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAd
 import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdLoader
 import com.google.android.libraries.ads.mobile.sdk.nativead.NativeAdLoaderCallback
@@ -64,10 +65,14 @@ class AdmobNextNativeAdvanced(
 
         adIsLoading = true
 
+        val videoOptions = VideoOptions.Builder()
+            .setStartMuted(true)
+            .build()
+
         val builder = NativeAdRequest.Builder(
             adUnitId,
             listOf(NativeAd.NativeAdType.NATIVE)
-        )
+        ).setVideoOptions(videoOptions)
         
         mediaAspectRatio?.let { ratio ->
             val nextGenRatio = when (ratio) {
