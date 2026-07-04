@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.util.Log
 import com.google.android.gms.ads.AdSize
 import com.oz.android.utils.listener.OzAdListener
+import com.oz.android.utils.config.AdsCoreType
 import com.oz.android.oz_ads.ads_inline.InlineAds
 import com.oz.android.utils.listener.OzAdError
 import com.oz.android.OzAdsManager
@@ -134,23 +135,32 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
         val density = context.resources.displayMetrics.density
         val widthDp = (width / density).toInt()
-        
+
         Log.d(TAG, "Setting shimmer size from container: ${width}px (${widthDp}dp)")
-        
-        // Use the same logic as AdmobBanner.calculateAdSize()
-        val heightParams = layoutParams?.height ?: android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-        val adSize = if (heightParams == android.view.ViewGroup.LayoutParams.WRAP_CONTENT) {
-            AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(context, widthDp)
+
+        val isNextGen = OzAdsManager.getInstance().config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN
+
+        // Match the AdSize type used by each banner implementation:
+        // - Next-Gen (AdmobNextBanner) always uses anchored adaptive banner.
+        // - Standard (AdmobStandardBanner) uses inline adaptive banner.
+        val adSize = if (isNextGen) {
+            AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, widthDp)
         } else {
-            val heightDp = (heightParams / density).toInt()
-            if (heightDp > 32) {
-                AdSize.getInlineAdaptiveBannerAdSize(widthDp, heightDp)
-            } else {
+            val heightParams = layoutParams?.height ?: android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            if (heightParams == android.view.ViewGroup.LayoutParams.WRAP_CONTENT) {
                 AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(context, widthDp)
+            } else {
+                val heightDp = (heightParams / density).toInt()
+                if (heightDp > 32) {
+                    AdSize.getInlineAdaptiveBannerAdSize(widthDp, heightDp)
+                } else {
+                    AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(context, widthDp)
+                }
             }
         }
+
         val heightPx = adSize.getHeightInPixels(context)
-        
+
         // Set shimmer height to match the ad size
         if (heightPx > 0) {
             shimmerLayout?.let { layout ->

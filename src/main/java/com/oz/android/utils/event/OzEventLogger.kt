@@ -22,6 +22,7 @@ object OzEventLogger {
         logEventWithAds(
             context,
             adValue.valueMicros.toFloat(),
+            adValue.currencyCode,
             adValue.precisionType,
             adUnitId,
             adapterClassName
@@ -31,18 +32,20 @@ object OzEventLogger {
     private fun logEventWithAds(
         context: Context,
         revenueMicros: Float,
+        currencyCode: String,
         precision: Int,
         adUnitId: String,
         network: String
     ) {
         val firebaseAnalytics = FirebaseAnalytics.getInstance(context)
-        val revenueUsd = revenueMicros / 1_000_000.0
+        val revenueInCurrency = revenueMicros / 1_000_000.0
 
         // 1. Debug Log to Console
         Log.d(
             TAG,
-            "Paid event of value %.6f USD (precision %s) for ad unit %s from network %s".format(
-                revenueUsd,
+            "Paid event of value %.6f %s (precision %s) for ad unit %s from network %s".format(
+                revenueInCurrency,
+                currencyCode,
                 precision,
                 adUnitId,
                 network
@@ -52,11 +55,11 @@ object OzEventLogger {
         // 2. Log Standard Revenue Event (ad_impression)
         // This is the standard event for Ad Revenue in Firebase (ROAS)
         val revenueParams = Bundle().apply {
-            putDouble(FirebaseAnalytics.Param.VALUE, revenueUsd)
-            putString(FirebaseAnalytics.Param.CURRENCY, "USD")
+            putDouble(FirebaseAnalytics.Param.VALUE, revenueInCurrency)
+            putString(FirebaseAnalytics.Param.CURRENCY, currencyCode)
             putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId)
             putString(FirebaseAnalytics.Param.AD_SOURCE, network)
-            putString(FirebaseAnalytics.Param.AD_PLATFORM, "AdMob") // or use mediation logic if needed
+            putString(FirebaseAnalytics.Param.AD_PLATFORM, "AdMob")
             putInt("precision", precision) // Custom param for precision
         }
         firebaseAnalytics.logEvent("app_event_impression", revenueParams)
@@ -85,6 +88,7 @@ object OzEventLogger {
         logEventWithAds(
             context,
             valueMicros.toFloat(),
+            currencyCode,
             0,
             adUnitId,
             adapterClassName

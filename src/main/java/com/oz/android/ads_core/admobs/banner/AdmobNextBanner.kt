@@ -85,112 +85,105 @@ class AdmobNextBanner(
     }
 
     private fun createAndLoadAdView() {
-        if (adView == null) {
-            val widthDp = calculateAdSizeDp()
-            Log.d(TAG, "Creating Next-Gen AdView with width: ${widthDp}dp")
+        // Always (re)create the AdView to allow retries after load failure.
+        // The old adView is destroyed before a new one is created.
+        adView?.destroy()
+        adView = null
 
-            val nextGenAdSize = if (collapsiblePosition != null) {
-                AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, widthDp)
-            } else {
-                AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, widthDp)
-            }
+        val widthDp = calculateAdSizeDp()
+        Log.d(TAG, "Creating Next-Gen AdView with width: ${widthDp}dp")
 
-            val nextGenAdView = AdView(context)
-            adView = nextGenAdView
+        // Next-Gen SDK recommends getLargeAnchoredAdaptiveBannerAdSize for anchored banner placement.
+        // Collapsible extras are passed via setGoogleExtrasBundle() below (not the old AdMobAdapter pattern).
+        val nextGenAdSize = AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, widthDp)
 
+        val nextGenAdView = AdView(context)
+        adView = nextGenAdView
+
+        val builder = BannerAdRequest.Builder(adUnitId, nextGenAdSize)
+        if (collapsiblePosition != null) {
             val extras = Bundle()
-            if (collapsiblePosition != null) {
-                extras.putString("collapsible", collapsiblePosition)
-            }
+            extras.putString("collapsible", collapsiblePosition)
+            builder.setGoogleExtrasBundle(extras)
+            Log.d(TAG, "Collapsible banner request built with position: $collapsiblePosition")
+        }
+        val adRequest = builder.build()
 
-            @Suppress("UNCHECKED_CAST")
-            val adapterClass = try {
-                Class.forName("com.google.ads.mediation.admob.AdMobAdapter") as? Class<out com.google.android.gms.ads.mediation.MediationExtrasReceiver>
-            } catch (e: Throwable) {
-                null
-            }
+        nextGenAdView.loadAd(
+            adRequest,
+            object : AdLoadCallback<BannerAd> {
+                override fun onAdLoaded(ad: BannerAd) {
+                    // ── Runs on GMA background thread ──
+                    // State update: no UI, safe on BG.
+                    isLoaded = true
+                    Log.d(TAG, "Banner ad loaded successfully (Next-Gen)")
 
-            val builder = BannerAdRequest.Builder(adUnitId, nextGenAdSize)
-            if (adapterClass != null) {
-                builder.putAdSourceExtrasBundle(adapterClass, extras)
-            }
-            val adRequest = builder.build()
-
-            nextGenAdView.loadAd(
-                adRequest,
-                object : AdLoadCallback<BannerAd> {
-                    override fun onAdLoaded(ad: BannerAd) {
-                        // ── Runs on GMA background thread ──
-                        // State update: no UI, safe on BG.
-                        isLoaded = true
-                        Log.d(TAG, "Banner ad loaded successfully (Next-Gen)")
-
-                        // Event callbacks: callers decide their own threading.
-                        ad.adEventCallback = object : BannerAdEventCallback {
-                            override fun onAdImpression() {
-                                listener?.onAdImpression()
-                            }
-
-                            override fun onAdClicked() {
-                                listener?.onAdClicked()
-                            }
-
-                            override fun onAdShowedFullScreenContent() {
-                                listener?.onAdShowedFullScreenContent()
-                            }
-
-                            override fun onAdDismissedFullScreenContent() {
-                                listener?.onAdDismissedFullScreenContent()
-                            }
-
-                            override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
-                                listener?.onAdFailedToShowFullScreenContent(error.toOzError())
-                            }
-
-                            override fun onAdPaid(value: AdValue) {
-                                OzEventLogger.logPaidAdImpressionNextGen(
-                                    context,
-                                    value.valueMicros,
-                                    value.currencyCode,
-                                    adUnitId,
-                                    ad.getResponseInfo().adapterClassName ?: "unknown"
-                                )
-                            }
+                    // Event callbacks: callers decide their own threading.
+                    ad.adEventCallback = object : BannerAdEventCallback {
+                        override fun onAdImpression() {
+                            listener?.onAdImpression()
                         }
 
-                        ad.bannerAdRefreshCallback = object : BannerAdRefreshCallback {
-                            override fun onAdRefreshed() {
-                                Log.d(TAG, "Next-Gen Banner ad refreshed")
-                            }
-
-                            override fun onAdFailedToRefresh(error: LoadAdError) {
-                                Log.e(TAG, "Next-Gen Banner ad failed to refresh: ${error.message}")
-                            }
+                        override fun onAdClicked() {
+                            listener?.onAdClicked()
                         }
 
-                        // Listener callback: called on GMA BG thread — caller decides thread.
-                        listener?.onAdLoaded(this@AdmobNextBanner)
+                        override fun onAdShowedFullScreenContent() {
+                            listener?.onAdShowedFullScreenContent()
+                        }
 
-                        // show() has its own main-thread guard — safe to call from BG.
-                        pendingContainer?.let { container ->
-                            show(container)
-                            pendingContainer = null
+                        override fun onAdDismissedFullScreenContent() {
+                            listener?.onAdDismissedFullScreenContent()
+                        }
+
+                        override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
+                            listener?.onAdFailedToShowFullScreenContent(error.toOzError())
+                        }
+
+                        override fun onAdPaid(value: AdValue) {
+                            OzEventLogger.logPaidAdImpressionNextGen(
+                                context,
+                                value.valueMicros,
+                                value.currencyCode,
+                                adUnitId,
+                                ad.getResponseInfo().adapterClassName ?: "unknown"
+                            )
                         }
                     }
 
-                    override fun onAdFailedToLoad(error: LoadAdError) {
-                        // ── Runs on GMA background thread ──
-                        // State cleanup: no UI, stays on BG.
-                        isLoaded = false
-                        Log.e(TAG, "Banner ad failed to load: ${error.message} (Next-Gen)")
-                        pendingContainer = null
+                    ad.bannerAdRefreshCallback = object : BannerAdRefreshCallback {
+                        override fun onAdRefreshed() {
+                            Log.d(TAG, "Next-Gen Banner ad refreshed")
+                        }
 
-                        // Listener callback: called on GMA BG thread — caller decides thread.
-                        listener?.onAdFailedToLoad(error.toOzError())
+                        override fun onAdFailedToRefresh(error: LoadAdError) {
+                            Log.e(TAG, "Next-Gen Banner ad failed to refresh: ${error.message}")
+                        }
+                    }
+
+                    // Listener callback: called on GMA BG thread — caller decides thread.
+                    listener?.onAdLoaded(this@AdmobNextBanner)
+
+                    // show() has its own main-thread guard — safe to call from BG.
+                    pendingContainer?.let { container ->
+                        show(container)
+                        pendingContainer = null
                     }
                 }
-            )
-        }
+
+                override fun onAdFailedToLoad(error: LoadAdError) {
+                    // ── Runs on GMA background thread ──
+                    // Null out adView so subsequent load() calls can create a fresh one (retry support).
+                    adView = null
+                    isLoaded = false
+                    Log.e(TAG, "Banner ad failed to load: ${error.message} (Next-Gen)")
+                    pendingContainer = null
+
+                    // Listener callback: called on GMA BG thread — caller decides thread.
+                    listener?.onAdFailedToLoad(error.toOzError())
+                }
+            }
+        )
     }
 
     override fun show() {
