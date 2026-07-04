@@ -53,6 +53,14 @@ class OzAdsManager private constructor(
     // Pending show runnables
     private val pendingShows = ConcurrentHashMap<String, () -> Unit>()
 
+    // Analytics logger hook (Fix 8)
+    @Volatile
+    var adEventLogger: ((event: String, key: String, reason: String?) -> Unit)? = null
+
+    fun logAdEvent(event: String, key: String, reason: String? = null) {
+        adEventLogger?.invoke(event, key, reason)
+    }
+
     // ----------------------------------------------------------------
     // Configuration Methods
     // ----------------------------------------------------------------

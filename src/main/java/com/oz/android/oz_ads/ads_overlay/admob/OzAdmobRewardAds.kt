@@ -191,6 +191,18 @@ open class OzAdmobRewardAds @JvmOverloads constructor(
         // Rewarded ads are one-time use objects in AdMob.
     }
 
+    override fun isValid(ad: AdmobReward): Boolean {
+        return ad.isAdLoaded()
+    }
+
+    override fun onAdShowBlocked(key: String, reason: String?) {
+        super.onAdShowBlocked(key, reason)
+        currentActivity = null
+        currentRewardCallback = null
+        listener?.onNextAction()
+        Log.d(TAG, "Cleaned up activity and callback reference for key: $key after show blocked")
+    }
+
     /**
      * Override onAdDismissed to clean up activity and callback references
      */

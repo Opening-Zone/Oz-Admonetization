@@ -161,6 +161,17 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
         // App Open ads are one-time use objects.
     }
 
+    override fun isValid(ad: AdmobAppOpen): Boolean {
+        return ad.isAdLoaded()
+    }
+
+    override fun onAdShowBlocked(key: String, reason: String?) {
+        super.onAdShowBlocked(key, reason)
+        currentActivity = null
+        listener?.onNextAction()
+        Log.d(TAG, "Cleaned up activity reference for key: $key after show blocked")
+    }
+
     /**
      * Override onAdDismissed to clean up activity reference
      */

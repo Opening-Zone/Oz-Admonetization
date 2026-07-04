@@ -148,7 +148,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
     override fun showAds(key: String) {
         if (!OzAdsManager.getInstance().canShowFullScreenAd()) {
             Log.d(TAG, "Skipping showAds for key: $key. Another fullscreen ad is already showing.")
-            onAdShowFailed(key, "Another fullscreen ad is already showing.")
+            onAdShowBlocked(key, "Another fullscreen ad is already showing.")
             return
         }
 
@@ -157,7 +157,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
             val category = getAdCategory()
             Log.d(TAG, "Skipping showAds ($category) for key: $key. Cooldown active. Remaining: ${remaining}ms")
 
-            onAdShowFailed(key, "Time gap not satisfied. Wait ${remaining}ms")
+            onAdShowBlocked(key, "Time gap not satisfied. Wait ${remaining}ms")
             return
         }
         super.showAds(key)
@@ -175,6 +175,15 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
 
     override fun hideAds() {
         Log.d(TAG, "hideAds called - no-op for Overlay ads")
+    }
+
+    /**
+     * Override onAdShowBlocked to dismiss the loading indicator that may have been shown
+     * by loadThenShow() before the block occurred. The cached ad is preserved.
+     */
+    override fun onAdShowBlocked(key: String, reason: String?) {
+        super.onAdShowBlocked(key, reason)
+        hideLoading()
     }
 
     /**
