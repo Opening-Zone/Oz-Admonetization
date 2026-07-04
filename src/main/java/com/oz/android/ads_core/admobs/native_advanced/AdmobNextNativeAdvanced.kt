@@ -34,11 +34,14 @@ class AdmobNextNativeAdvanced(
     listener: OzAdListener<AdmobNativeAdvanced>? = null
 ) : AdmobBase<AdmobNativeAdvanced>(context, adUnitId, listener), AdmobNativeAdvanced {
 
-    private var nextGenNativeAd: NativeAd? = null
-    private var isLoaded = false
-    private var adIsLoading = false
+    @Volatile private var nextGenNativeAd: NativeAd? = null
+    @Volatile private var isLoaded = false
+    @Volatile private var adIsLoading = false
     private var pendingContainer: ViewGroup? = null
     private var pendingNativeAdView: View? = null
+    // Custom populate callback stored when using loadThenShow(container, view, callback).
+    // Passed to show() when the pending show is triggered after load completes.
+    private var pendingPopulateCallback: ((Any, View) -> Unit)? = null
     private var onAdLoadedCallback: ((Any) -> Unit)? = null
     private var mediaAspectRatio: Int? = null
 
@@ -75,11 +78,13 @@ class AdmobNextNativeAdvanced(
         ).setVideoOptions(videoOptions)
         
         mediaAspectRatio?.let { ratio ->
+            // GMS Standard integer values: ANY=1, LANDSCAPE=2, PORTRAIT=3, SQUARE=4
+            // Map to equivalent Next-Gen enum constants.
             val nextGenRatio = when (ratio) {
-                1 -> NativeAd.NativeMediaAspectRatio.LANDSCAPE
-                2 -> NativeAd.NativeMediaAspectRatio.PORTRAIT
-                3 -> NativeAd.NativeMediaAspectRatio.SQUARE
-                4 -> NativeAd.NativeMediaAspectRatio.ANY
+                1 -> NativeAd.NativeMediaAspectRatio.ANY
+                2 -> NativeAd.NativeMediaAspectRatio.LANDSCAPE
+                3 -> NativeAd.NativeMediaAspectRatio.PORTRAIT
+                4 -> NativeAd.NativeMediaAspectRatio.SQUARE
                 else -> NativeAd.NativeMediaAspectRatio.ANY
             }
             builder.setMediaAspectRatio(nextGenRatio)
@@ -114,9 +119,11 @@ class AdmobNextNativeAdvanced(
                 // show() has its own main-thread guard — safe to call from BG.
                 pendingContainer?.let { container ->
                     pendingNativeAdView?.let { nativeAdView ->
-                        show(container, nativeAdView)
+                        // Pass the stored populateCallback so show() doesn't fall back to default populate.
+                        show(container, nativeAdView, pendingPopulateCallback)
                         pendingContainer = null
                         pendingNativeAdView = null
+                        pendingPopulateCallback = null
                     }
                 }
             }
@@ -131,6 +138,8 @@ class AdmobNextNativeAdvanced(
                 adIsLoading = false
                 pendingContainer = null
                 pendingNativeAdView = null
+                pendingPopulateCallback = null  // clear to prevent stale callback execution
+                onAdLoadedCallback = null  // clear to prevent stale callback execution
 
                 // Listener callback: called on GMA BG thread — caller decides thread.
                 listener?.onAdFailedToLoad(error.toOzError())
@@ -211,11 +220,9 @@ class AdmobNextNativeAdvanced(
     ) {
         pendingContainer = container
         pendingNativeAdView = nativeAdView
-        if (populateCallback != null) {
-            onAdLoadedCallback = { ad ->
-                populateCallback.invoke(ad, nativeAdView)
-            }
-        }
+        // Store the custom callback so onNativeAdLoaded can pass it to show(),
+        // preventing show() from falling back to populateNextGenNativeAdView() (double-population).
+        pendingPopulateCallback = populateCallback
         load()
     }
 
@@ -355,6 +362,8 @@ class AdmobNextNativeAdvanced(
         adIsLoading = false
         pendingContainer = null
         pendingNativeAdView = null
+        pendingPopulateCallback = null  // clear to prevent stale callback execution
+        onAdLoadedCallback = null  // clear to prevent stale callback execution
         Log.d(TAG, "Native ad destroyed")
     }
 
