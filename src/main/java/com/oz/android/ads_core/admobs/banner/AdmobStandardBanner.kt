@@ -11,10 +11,12 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.OnPaidEventListener
 import com.google.ads.mediation.admob.AdMobAdapter
 import com.oz.android.ads_core.admobs.AdmobBase
 import com.oz.android.ads_core.admobs.toOzError
 import com.oz.android.utils.listener.OzAdListener
+import com.oz.android.utils.event.OzEventLogger
 
 /**
  * Standard SDK implementation of Banner ads.
@@ -83,7 +85,14 @@ class AdmobStandardBanner(
             val standardAdView = AdView(context).apply {
                 this.adUnitId = this@AdmobStandardBanner.adUnitId
                 setAdSize(adSize)
-                onPaidEventListener = getOnPaidListener(responseInfo)
+                onPaidEventListener = OnPaidEventListener { adValue ->
+                    OzEventLogger.logPaidAdImpression(
+                        context,
+                        adValue,
+                        this@AdmobStandardBanner.adUnitId,
+                        this.responseInfo
+                    )
+                }
                 adListener = object : AdListener() {
                     override fun onAdLoaded() {
                         isLoaded = true

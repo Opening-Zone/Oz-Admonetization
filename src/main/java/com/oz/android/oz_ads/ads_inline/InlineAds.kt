@@ -83,6 +83,13 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
         stopShimmer()
     }
 
+    override fun onAdLoaded(key: String, ad: AdType) {
+        super.onAdLoaded(key, ad)
+        if (isVisible) {
+            scheduleNextRefresh()
+        }
+    }
+
     /**
      * Abstract method for implementations to set shimmer size based on ad configuration
      */

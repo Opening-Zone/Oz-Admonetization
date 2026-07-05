@@ -17,11 +17,13 @@ object OzEventLogger {
         adUnitId: String,
         responseInfo: ResponseInfo?
     ) {
-        val adapterClassName = responseInfo?.mediationAdapterClassName ?: "unknown"
+        val adapterClassName = responseInfo?.loadedAdapterResponseInfo?.adapterClassName
+            ?: responseInfo?.mediationAdapterClassName
+            ?: "unknown"
 
         logEventWithAds(
             context,
-            adValue.valueMicros.toFloat(),
+            adValue.valueMicros,
             adValue.currencyCode,
             adValue.precisionType,
             adUnitId,
@@ -31,13 +33,17 @@ object OzEventLogger {
 
     private fun logEventWithAds(
         context: Context,
-        revenueMicros: Float,
+        revenueMicros: Long,
         currencyCode: String,
         precision: Int,
         adUnitId: String,
         network: String
     ) {
         val firebaseAnalytics = FirebaseAnalytics.getInstance(context)
+
+        // NOTE (currency): adValue.currencyCode is returned according to the AdMob account's 
+        // REPORTING CURRENCY (e.g., USD), NOT the user's local geo currency. Do not assume
+        // a user in VN will report VND here.
         val revenueInCurrency = revenueMicros / 1_000_000.0
 
         // 1. Debug Log to Console
@@ -53,7 +59,10 @@ object OzEventLogger {
         )
 
         // 2. Log Standard Revenue Event (ad_impression)
-        // This is the standard event for Ad Revenue in Firebase (ROAS)
+        // NOTE (event name): "app_event_impression" is a custom event — it is not automatically
+        // used by Firebase/Google Ads for ROAS calculation like the standard "ad_impression" event.
+        // Confirm with the analytics team before changing this event name to avoid breaking dashboards
+        // or causing double-counting if AdMob-Firebase linking is already active.
         val revenueParams = Bundle().apply {
             putDouble(FirebaseAnalytics.Param.VALUE, revenueInCurrency)
             putString(FirebaseAnalytics.Param.CURRENCY, currencyCode)
@@ -87,7 +96,7 @@ object OzEventLogger {
         // Next-Gen doesn't expose precision, so we pass 0 (UNKNOWN)
         logEventWithAds(
             context,
-            valueMicros.toFloat(),
+            valueMicros,
             currencyCode,
             0,
             adUnitId,

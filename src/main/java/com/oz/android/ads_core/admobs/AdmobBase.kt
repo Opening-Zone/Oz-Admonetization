@@ -43,7 +43,13 @@ abstract class AdmobBase<AdType>(
     abstract fun loadThenShow()
 
     /**
-     * Paid admob event
+     * Paid admob event.
+     *
+     * WARNING: This function captures the ResponseInfo ONCE in its closure.
+     * Only use this for one-time load formats (interstitial, app open, reward, native)
+     * and call it AFTER the ad has finished loading.
+     * DO NOT use this for banner or any auto-refreshing format. For those formats,
+     * read responseInfo dynamically inside the lambda (see AdmobStandardBanner.createAndLoadAdView).
      */
      fun getOnPaidListener(response: ResponseInfo?): OnPaidEventListener {
         return OnPaidEventListener { adValue ->

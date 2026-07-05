@@ -26,6 +26,9 @@ class OzAdsManager private constructor(
     @Volatile
     private var initialized = false
 
+    @Volatile
+    private var initStarted = false
+
     // Signals awaitInitialization() callers when init() completes.
     private val initDeferred = kotlinx.coroutines.CompletableDeferred<OzAdsResult<Unit>>()
 
@@ -221,6 +224,17 @@ class OzAdsManager private constructor(
             return OzAdsResult.Success(Unit)
         }
 
+        // If another initialization is already in progress, just await its completion.
+        if (initStarted) {
+            OzLog.d("OzAdsManager", "SDK initialization already in progress, awaiting existing init...")
+            val result = initDeferred.await()
+            if (initialized) {
+                onSuccess?.invoke()
+            }
+            return result
+        }
+
+        initStarted = true
         val initStartTime = System.currentTimeMillis()
         OzLog.d("OzAdsManager", "SDK initialization started...")
 
@@ -232,6 +246,7 @@ class OzAdsManager private constructor(
                     val elapsed = System.currentTimeMillis() - initStartTime
                     OzLog.d("OzAdsManager", "✅ SDK fully initialized in ${elapsed}ms (Next-Gen)")
                     initialized = true
+                    initDeferred.complete(OzAdsResult.Success(Unit))
                     onSuccess?.invoke()
                     if (continuation.isActive) continuation.resume(OzAdsResult.Success(Unit))
                 }
@@ -241,14 +256,13 @@ class OzAdsManager private constructor(
                     val elapsed = System.currentTimeMillis() - initStartTime
                     OzLog.d("OzAdsManager", "✅ SDK fully initialized in ${elapsed}ms (Standard GMS)")
                     initialized = true
+                    initDeferred.complete(OzAdsResult.Success(Unit))
                     onSuccess?.invoke()
                     if (continuation.isActive) continuation.resume(OzAdsResult.Success(Unit))
                 }
             }
         }
 
-        // Signal any awaitInitialization() callers that init is done.
-        initDeferred.complete(result)
         return result
     }
 
@@ -271,6 +285,7 @@ class OzAdsManager private constructor(
         val result = withTimeoutOrNull(INIT_TIMEOUT_MS) { initDeferred.await() }
         if (result == null) {
             OzLog.w("OzAdsManager", "SDK init timeout after ${INIT_TIMEOUT_MS}ms — proceeding to load ads. Init continues in background.")
+            initialized = true
         }
         return OzAdsResult.Success(Unit)
     }

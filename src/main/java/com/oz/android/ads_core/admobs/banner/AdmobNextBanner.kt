@@ -29,10 +29,11 @@ class AdmobNextBanner(
     listener: OzAdListener<AdmobBanner>? = null
 ) : AdmobBase<AdmobBanner>(context, adUnitId, listener), AdmobBanner {
 
-    private var adView: AdView? = null
-    private var isLoaded = false
-    private var pendingContainer: ViewGroup? = null
-    private var containerForSizeCalculation: ViewGroup? = null
+    @Volatile private var adView: AdView? = null
+    @Volatile private var isLoaded = false
+    @Volatile private var pendingContainer: ViewGroup? = null
+    @Volatile private var containerForSizeCalculation: ViewGroup? = null
+    @Volatile private var adIsLoading = false
 
     // Used only for dispatching library-owned UI operations (show/hide views) to main thread.
     // Listener callbacks are intentionally called on whatever thread they fire — callers decide their own thread.
@@ -85,6 +86,12 @@ class AdmobNextBanner(
     }
 
     private fun createAndLoadAdView() {
+        if (adIsLoading) {
+            Log.d(TAG, "Ad is already loading, skipping duplicate request")
+            return
+        }
+        adIsLoading = true
+
         // Always (re)create the AdView to allow retries after load failure.
         // The old adView is destroyed before a new one is created.
         adView?.destroy()
@@ -93,9 +100,11 @@ class AdmobNextBanner(
         val widthDp = calculateAdSizeDp()
         Log.d(TAG, "Creating Next-Gen AdView with width: ${widthDp}dp")
 
-        // Next-Gen SDK recommends getLargeAnchoredAdaptiveBannerAdSize for anchored banner placement.
-        // Collapsible extras are passed via setGoogleExtrasBundle() below (not the old AdMobAdapter pattern).
-        val nextGenAdSize = AdSize.getLargeAnchoredAdaptiveBannerAdSize(context, widthDp)
+        // Use standard orientation anchored adaptive size for ALL banners (including collapsible — Google only
+        // requires anchored adaptive; large is optional). This formula must match the shimmer height
+        // in OzAdmobBannerAd.setShimmerSizeInternal() — if modified here, it MUST be modified there
+        // as well, otherwise layout jumping issues will reoccur.
+        val nextGenAdSize = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, widthDp)
 
         val nextGenAdView = AdView(context)
         adView = nextGenAdView
@@ -116,6 +125,7 @@ class AdmobNextBanner(
                     // ── Runs on GMA background thread ──
                     // State update: no UI, safe on BG.
                     isLoaded = true
+                    adIsLoading = false
                     Log.d(TAG, "Banner ad loaded successfully (Next-Gen)")
 
                     // Event callbacks: callers decide their own threading.
@@ -176,6 +186,7 @@ class AdmobNextBanner(
                     // Null out adView so subsequent load() calls can create a fresh one (retry support).
                     adView = null
                     isLoaded = false
+                    adIsLoading = false
                     Log.e(TAG, "Banner ad failed to load: ${error.message} (Next-Gen)")
                     pendingContainer = null
 
@@ -250,6 +261,7 @@ class AdmobNextBanner(
     }
 
     override fun destroy() {
+        adIsLoading = false
         adView?.destroy()
         adView = null
         isLoaded = false
