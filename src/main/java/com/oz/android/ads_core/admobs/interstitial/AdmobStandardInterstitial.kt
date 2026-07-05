@@ -26,8 +26,6 @@ class AdmobStandardInterstitial(
 ) : AdmobBase<AdmobInterstitial>(context, adUnitId, listener), AdmobInterstitial {
 
     private var interstitialAd: InterstitialAd? = null
-    private var isLoaded = false
-    private var adIsLoading = false
     private var loadTime: Long = 0
 
     companion object {
@@ -36,12 +34,10 @@ class AdmobStandardInterstitial(
     }
 
     override fun load() {
-        if (adIsLoading || interstitialAd != null) {
-            Log.d(TAG, "Ad already loading or loaded")
+        if (interstitialAd != null) {
+            Log.d(TAG, "Ad already loaded")
             return
         }
-
-        adIsLoading = true
 
         InterstitialAd.load(
             context,
@@ -52,8 +48,6 @@ class AdmobStandardInterstitial(
                     OzLoadingDialog.hideFullScreenLoadingDialog()
                     Log.d(TAG, "Interstitial ad loaded successfully")
                     interstitialAd = ad
-                    isLoaded = true
-                    adIsLoading = false
                     loadTime = System.currentTimeMillis()
                     interstitialAd?.onPaidEventListener = getOnPaidListener(interstitialAd!!.responseInfo)
                     listener?.onAdLoaded(this@AdmobStandardInterstitial)
@@ -65,8 +59,6 @@ class AdmobStandardInterstitial(
                     OzLoadingDialog.hideFullScreenLoadingDialog()
                     Log.e(TAG, "Interstitial ad failed to load: ${adError.message}")
                     interstitialAd = null
-                    isLoaded = false
-                    adIsLoading = false
 
                     listener?.onAdFailedToLoad(adError.toOzError())
                 }
@@ -82,10 +74,6 @@ class AdmobStandardInterstitial(
         val currentAd = interstitialAd
         if (currentAd == null || isAdExpired()) {
             Log.w(TAG, "InterstitialAd is null or expired. Call load() first")
-            return
-        }
-        if (!isLoaded) {
-            Log.w(TAG, "Ad not loaded yet.")
             return
         }
         currentAd.show(activity)
@@ -117,14 +105,12 @@ class AdmobStandardInterstitial(
             override fun onAdDismissedFullScreenContent() {
                 Log.d(TAG, "Ad was dismissed")
                 interstitialAd = null
-                isLoaded = false
                 listener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
                 Log.e(TAG, "Ad failed to show: ${adError.message}")
                 interstitialAd = null
-                isLoaded = false
                 listener?.onAdFailedToShowFullScreenContent(adError.toOzError())
             }
 
@@ -146,7 +132,7 @@ class AdmobStandardInterstitial(
     }
 
     override fun isAdLoaded(): Boolean {
-        return isLoaded && interstitialAd != null && !isAdExpired()
+        return interstitialAd != null && !isAdExpired()
     }
 
     private fun isAdExpired(): Boolean {

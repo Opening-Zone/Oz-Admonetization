@@ -23,20 +23,16 @@ class AdmobStandardReward(
     listener: OzAdListener<AdmobReward>? = null
 ) : AdmobBase<AdmobReward>(context, adUnitId, listener), AdmobReward {
     private var rewardedAd: RewardedAd? = null
-    private var isLoaded = false
-    private var adIsLoading = false
 
     companion object {
         private const val TAG = "AdmobStandardReward"
     }
 
     override fun load() {
-        if (adIsLoading || rewardedAd != null) {
-            Log.d(TAG, "Ad already loading or loaded")
+        if (rewardedAd != null) {
+            Log.d(TAG, "Ad already loaded")
             return
         }
-
-        adIsLoading = true
 
         RewardedAd.load(
             context,
@@ -46,8 +42,6 @@ class AdmobStandardReward(
                 override fun onAdLoaded(ad: RewardedAd) {
                     Log.d(TAG, "Rewarded ad loaded successfully")
                     rewardedAd = ad
-                    isLoaded = true
-                    adIsLoading = false
                     
                     rewardedAd?.onPaidEventListener = getOnPaidListener(rewardedAd!!.responseInfo)
                     listener?.onAdLoaded(this@AdmobStandardReward)
@@ -58,8 +52,6 @@ class AdmobStandardReward(
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     Log.e(TAG, "Rewarded ad failed to load: ${adError.message}")
                     rewardedAd = null
-                    isLoaded = false
-                    adIsLoading = false
                     
                     listener?.onAdFailedToLoad(adError.toOzError())
                 }
@@ -78,11 +70,6 @@ class AdmobStandardReward(
         val currentAd = rewardedAd
         if (currentAd == null) {
             Log.w(TAG, "RewardedAd is null. Call load() first")
-            return
-        }
-
-        if (!isLoaded) {
-            Log.w(TAG, "Ad not loaded yet.")
             return
         }
 
@@ -106,14 +93,12 @@ class AdmobStandardReward(
             override fun onAdDismissedFullScreenContent() {
                 Log.d(TAG, "Ad was dismissed")
                 rewardedAd = null
-                isLoaded = false
                 listener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
                 Log.e(TAG, "Ad failed to show: ${adError.message}")
                 rewardedAd = null
-                isLoaded = false
                 listener?.onAdFailedToShowFullScreenContent(adError.toOzError())
             }
 
@@ -135,6 +120,6 @@ class AdmobStandardReward(
     }
 
     override fun isAdLoaded(): Boolean {
-        return isLoaded && rewardedAd != null
+        return rewardedAd != null
     }
 }

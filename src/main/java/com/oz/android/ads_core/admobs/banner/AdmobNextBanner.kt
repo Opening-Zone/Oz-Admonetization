@@ -30,10 +30,8 @@ class AdmobNextBanner(
 ) : AdmobBase<AdmobBanner>(context, adUnitId, listener), AdmobBanner {
 
     @Volatile private var adView: AdView? = null
-    @Volatile private var isLoaded = false
     @Volatile private var pendingContainer: ViewGroup? = null
     @Volatile private var containerForSizeCalculation: ViewGroup? = null
-    @Volatile private var adIsLoading = false
 
     // Used only for dispatching library-owned UI operations (show/hide views) to main thread.
     // Listener callbacks are intentionally called on whatever thread they fire — callers decide their own thread.
@@ -69,7 +67,7 @@ class AdmobNextBanner(
     }
 
     override fun load(container: ViewGroup?) {
-        if (adView != null && isLoaded) {
+        if (adView != null) {
             Log.d(TAG, "Ad already loaded")
             return
         }
@@ -86,11 +84,6 @@ class AdmobNextBanner(
     }
 
     private fun createAndLoadAdView() {
-        if (adIsLoading) {
-            Log.d(TAG, "Ad is already loading, skipping duplicate request")
-            return
-        }
-        adIsLoading = true
 
         // Always (re)create the AdView to allow retries after load failure.
         // The old adView is destroyed before a new one is created.
@@ -124,8 +117,6 @@ class AdmobNextBanner(
                 override fun onAdLoaded(ad: BannerAd) {
                     // ── Runs on GMA background thread ──
                     // State update: no UI, safe on BG.
-                    isLoaded = true
-                    adIsLoading = false
                     Log.d(TAG, "Banner ad loaded successfully (Next-Gen)")
 
                     // Event callbacks: callers decide their own threading.
@@ -185,8 +176,6 @@ class AdmobNextBanner(
                     // ── Runs on GMA background thread ──
                     // Null out adView so subsequent load() calls can create a fresh one (retry support).
                     adView = null
-                    isLoaded = false
-                    adIsLoading = false
                     Log.e(TAG, "Banner ad failed to load: ${error.message} (Next-Gen)")
                     pendingContainer = null
 
@@ -205,12 +194,7 @@ class AdmobNextBanner(
         val showRunnable = Runnable {
             val currentAdView = adView
             if (currentAdView == null) {
-                Log.w(TAG, "AdView is null. Call load() first")
-                return@Runnable
-            }
-
-            if (!isLoaded) {
-                Log.w(TAG, "Ad not loaded yet. It will be shown automatically when loaded")
+                Log.w(TAG, "AdView not ready. It will be shown automatically when loaded")
                 pendingContainer = container
                 return@Runnable
             }
@@ -261,10 +245,8 @@ class AdmobNextBanner(
     }
 
     override fun destroy() {
-        adIsLoading = false
         adView?.destroy()
         adView = null
-        isLoaded = false
         pendingContainer = null
         containerForSizeCalculation = null
     }
@@ -285,7 +267,7 @@ class AdmobNextBanner(
         }
     }
 
-    fun isAdLoaded(): Boolean = isLoaded
+    fun isAdLoaded(): Boolean = adView != null
 
     override fun pause() {}
     override fun resume() {}

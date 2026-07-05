@@ -23,8 +23,6 @@ class AdmobRewardedInterstitial(
     listener: OzAdListener<AdmobRewardedInterstitial>
 ) : AdmobBase<AdmobRewardedInterstitial>(context, adUnitId, listener) {
     private var rewardedInterstitialAd: RewardedInterstitialAd? = null
-    private var isLoaded = false
-    private var adIsLoading = false
 
     companion object {
         private const val TAG = "AdmobRewardedInterstitial"
@@ -36,12 +34,10 @@ class AdmobRewardedInterstitial(
      */
     override fun load() {
         // Request a new ad if one isn't already loaded or loading
-        if (adIsLoading || rewardedInterstitialAd != null) {
-            Log.d(TAG, "Ad already loading or loaded")
+        if (rewardedInterstitialAd != null) {
+            Log.d(TAG, "Ad already loaded")
             return
         }
-
-        adIsLoading = true
 
         RewardedInterstitialAd.load(
             context,
@@ -51,8 +47,6 @@ class AdmobRewardedInterstitial(
                 override fun onAdLoaded(ad: RewardedInterstitialAd) {
                     Log.d(TAG, "Rewarded interstitial ad loaded successfully")
                     rewardedInterstitialAd = ad
-                    isLoaded = true
-                    adIsLoading = false
 
                     // Setup FullScreenContentCallback
                     setupFullScreenContentCallback(ad)
@@ -61,8 +55,6 @@ class AdmobRewardedInterstitial(
                 override fun onAdFailedToLoad(adError: LoadAdError) {
                     Log.e(TAG, "Rewarded interstitial ad failed to load: ${adError.message}")
                     rewardedInterstitialAd = null
-                    isLoaded = false
-                    adIsLoading = false
                 }
             }
         )
@@ -88,11 +80,6 @@ class AdmobRewardedInterstitial(
         val currentAd = rewardedInterstitialAd
         if (currentAd == null) {
             Log.w(TAG, "RewardedInterstitialAd is null. Call load() first")
-            return
-        }
-
-        if (!isLoaded) {
-            Log.w(TAG, "Ad not loaded yet.")
             return
         }
 
@@ -135,7 +122,6 @@ class AdmobRewardedInterstitial(
                 // Don't forget to set the ad reference to null so you
                 // don't show the ad a second time
                 rewardedInterstitialAd = null
-                isLoaded = false
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
@@ -144,7 +130,6 @@ class AdmobRewardedInterstitial(
                 // Don't forget to set the ad reference to null so you
                 // don't show the ad a second time
                 rewardedInterstitialAd = null
-                isLoaded = false
             }
 
             override fun onAdShowedFullScreenContent() {
@@ -169,7 +154,7 @@ class AdmobRewardedInterstitial(
      * @return true if the ad is loaded, false otherwise
      */
     fun isAdLoaded(): Boolean {
-        return isLoaded && rewardedInterstitialAd != null
+        return rewardedInterstitialAd != null
     }
 
     /**

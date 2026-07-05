@@ -35,8 +35,6 @@ class AdmobNextNativeAdvanced(
 ) : AdmobBase<AdmobNativeAdvanced>(context, adUnitId, listener), AdmobNativeAdvanced {
 
     @Volatile private var nextGenNativeAd: NativeAd? = null
-    @Volatile private var isLoaded = false
-    @Volatile private var adIsLoading = false
     @Volatile private var pendingContainer: ViewGroup? = null
     @Volatile private var pendingNativeAdView: View? = null
     // Custom populate callback stored when using loadThenShow(container, view, callback).
@@ -63,15 +61,11 @@ class AdmobNextNativeAdvanced(
     }
 
     override fun load() {
-        if (adIsLoading || nextGenNativeAd != null) {
-            Log.d(TAG, "Ad already loading or loaded (Next-Gen)")
-            if (nextGenNativeAd != null) {
-                listener?.onAdLoaded(this)
-            }
+        if (nextGenNativeAd != null) {
+            Log.d(TAG, "Ad already loaded (Next-Gen)")
+            listener?.onAdLoaded(this)
             return
         }
-
-        adIsLoading = true
 
         val videoOptions = VideoOptions.Builder()
             .setStartMuted(true)
@@ -112,8 +106,6 @@ class AdmobNextNativeAdvanced(
                 // State updates: safe on BG, no UI involved.
                 nextGenNativeAd?.destroy()
                 nextGenNativeAd = nativeAd
-                isLoaded = true
-                adIsLoading = false
 
                 Log.d(TAG, "Native ad loaded successfully (Next-Gen)")
                 setupNextGenNativeEventCallback(nativeAd)
@@ -139,7 +131,6 @@ class AdmobNextNativeAdvanced(
 
                 // State cleanup: no UI, stays on BG.
                 nextGenNativeAd = null
-                isLoaded = false
                 clearPendingState()
 
                 // Listener callback: called on GMA BG thread — caller decides thread.
@@ -173,14 +164,6 @@ class AdmobNextNativeAdvanced(
             val currentAd = nextGenNativeAd
             if (currentAd == null) {
                 Log.w(TAG, "NativeAd is null (Next-Gen). Call load() first")
-                pendingContainer = container
-                pendingNativeAdView = nativeAdView
-                pendingPopulateCallback = populateCallback
-                return@Runnable
-            }
-
-            if (!isLoaded) {
-                Log.w(TAG, "Ad not loaded yet (Next-Gen). It will be shown automatically when loaded")
                 pendingContainer = container
                 pendingNativeAdView = nativeAdView
                 pendingPopulateCallback = populateCallback
@@ -347,7 +330,7 @@ class AdmobNextNativeAdvanced(
     }
 
     override fun isAdLoaded(): Boolean {
-        return isLoaded && nextGenNativeAd != null
+        return nextGenNativeAd != null
     }
 
     override fun getCurrentNativeAd(): Any? {
@@ -361,13 +344,11 @@ class AdmobNextNativeAdvanced(
     override fun destroy() {
         nextGenNativeAd?.destroy()
         nextGenNativeAd = null
-        isLoaded = false
         clearPendingState()
         Log.d(TAG, "Native ad destroyed")
     }
 
     private fun clearPendingState() {
-        adIsLoading = false
         pendingContainer = null
         pendingNativeAdView = null
         pendingPopulateCallback = null

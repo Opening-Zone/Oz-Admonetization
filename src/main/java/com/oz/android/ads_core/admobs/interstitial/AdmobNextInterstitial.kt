@@ -25,8 +25,6 @@ class AdmobNextInterstitial(
 ) : AdmobBase<AdmobInterstitial>(context, adUnitId, listener), AdmobInterstitial {
 
     private var nextGenAd: InterstitialAd? = null
-    private var isLoaded = false
-    private var adIsLoading = false
     private var loadTime: Long = 0
 
     // Used only for dispatching library-owned UI operations (show/hide views) to main thread.
@@ -39,12 +37,10 @@ class AdmobNextInterstitial(
     }
 
     override fun load() {
-        if (adIsLoading || nextGenAd != null) {
-            Log.d(TAG, "Ad already loading or loaded (Next-Gen)")
+        if (nextGenAd != null) {
+            Log.d(TAG, "Ad already loaded (Next-Gen)")
             return
         }
-
-        adIsLoading = true
 
         InterstitialAd.load(
             AdRequest.Builder(adUnitId).build(),
@@ -54,8 +50,6 @@ class AdmobNextInterstitial(
                     // State updates: no UI, safe on BG.
                     Log.d(TAG, "Interstitial ad loaded successfully (Next-Gen)")
                     nextGenAd = ad
-                    isLoaded = true
-                    adIsLoading = false
                     loadTime = System.currentTimeMillis()
 
                     // setupNextGenFullScreenCallback only sets a property, safe on BG.
@@ -72,8 +66,6 @@ class AdmobNextInterstitial(
                     // State cleanup: no UI, stays on BG.
                     Log.e(TAG, "Interstitial ad failed to load: ${error.message} (Next-Gen)")
                     nextGenAd = null
-                    isLoaded = false
-                    adIsLoading = false
 
                     // OzLoadingDialog is library-owned UI — must be on main.
                     mainHandler.post { OzLoadingDialog.hideFullScreenLoadingDialog() }
@@ -93,10 +85,6 @@ class AdmobNextInterstitial(
             val currentAd = nextGenAd
             if (currentAd == null || isAdExpired()) {
                 Log.w(TAG, "InterstitialAd is null or expired (Next-Gen). Call load() first")
-                return@Runnable
-            }
-            if (!isLoaded) {
-                Log.w(TAG, "Ad not loaded yet (Next-Gen).")
                 return@Runnable
             }
             currentAd.show(activity)
@@ -139,14 +127,12 @@ class AdmobNextInterstitial(
             override fun onAdDismissedFullScreenContent() {
                 Log.d(TAG, "Ad was dismissed (Next-Gen)")
                 nextGenAd = null
-                isLoaded = false
                 listener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
                 Log.e(TAG, "Ad failed to show: ${error.message} (Next-Gen)")
                 nextGenAd = null
-                isLoaded = false
                 listener?.onAdFailedToShowFullScreenContent(error.toOzError())
             }
 
@@ -178,7 +164,7 @@ class AdmobNextInterstitial(
     }
 
     override fun isAdLoaded(): Boolean {
-        return isLoaded && nextGenAd != null && !isAdExpired()
+        return nextGenAd != null && !isAdExpired()
     }
 
     private fun isAdExpired(): Boolean {

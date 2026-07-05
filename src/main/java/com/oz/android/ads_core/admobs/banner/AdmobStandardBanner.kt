@@ -27,7 +27,6 @@ class AdmobStandardBanner(
     listener: OzAdListener<AdmobBanner>?
 ) : AdmobBase<AdmobBanner>(context, adUnitId, listener), AdmobBanner {
     private var adView: AdView? = null
-    private var isLoaded = false
     private var pendingContainer: ViewGroup? = null
     private var containerForSizeCalculation: ViewGroup? = null
     
@@ -60,7 +59,7 @@ class AdmobStandardBanner(
     }
 
     override fun load(container: ViewGroup?) {
-        if (adView != null && isLoaded) {
+        if (adView != null) {
             Log.d(TAG, "Ad already loaded")
             return
         }
@@ -95,7 +94,6 @@ class AdmobStandardBanner(
                 }
                 adListener = object : AdListener() {
                     override fun onAdLoaded() {
-                        isLoaded = true
                         Log.d(TAG, "Banner ad loaded successfully")
                         listener?.onAdLoaded(this@AdmobStandardBanner)
 
@@ -106,7 +104,6 @@ class AdmobStandardBanner(
                     }
 
                     override fun onAdFailedToLoad(error: LoadAdError) {
-                        isLoaded = false
                         Log.e(TAG, "Banner ad failed to load: ${error.message}")
                         listener?.onAdFailedToLoad(error.toOzError())
                         pendingContainer = null
@@ -137,13 +134,9 @@ class AdmobStandardBanner(
     }
 
     override fun show(container: ViewGroup) {
-        val currentAdView = adView ?: run {
-            Log.w(TAG, "AdView is null. Call load() first")
-            return
-        }
-
-        if (!isLoaded) {
-            Log.w(TAG, "Ad not loaded yet. It will be shown automatically when loaded")
+        val currentAdView = adView
+        if (currentAdView == null) {
+            Log.w(TAG, "AdView not ready. It will be shown automatically when loaded")
             pendingContainer = container
             return
         }
@@ -187,7 +180,6 @@ class AdmobStandardBanner(
     override fun destroy() {
         adView?.destroy()
         adView = null
-        isLoaded = false
         pendingContainer = null
         containerForSizeCalculation = null
     }

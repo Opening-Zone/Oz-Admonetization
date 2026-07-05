@@ -34,8 +34,6 @@ class AdmobStandardNativeAdvanced(
 ) : AdmobBase<AdmobNativeAdvanced>(context, adUnitId, listener), AdmobNativeAdvanced {
 
     private var currentNativeAd: Any? = null
-    private var isLoaded = false
-    private var adIsLoading = false
     private var pendingContainer: ViewGroup? = null
     private var pendingNativeAdView: View? = null
     private var onAdLoadedCallback: ((Any) -> Unit)? = null
@@ -50,15 +48,11 @@ class AdmobStandardNativeAdvanced(
     }
 
     override fun load() {
-        if (adIsLoading || currentNativeAd != null) {
-            Log.d(TAG, "Ad already loading or loaded")
-            if (currentNativeAd != null) {
-                listener?.onAdLoaded(this)
-            }
+        if (currentNativeAd != null) {
+            Log.d(TAG, "Ad already loaded")
+            listener?.onAdLoaded(this)
             return
         }
-
-        adIsLoading = true
 
         CoroutineScope(Dispatchers.IO).launch {
             val builder = AdLoader.Builder(context, adUnitId)
@@ -122,8 +116,6 @@ class AdmobStandardNativeAdvanced(
                                 "domain: ${loadAdError.domain}, code: ${loadAdError.code}, message: ${loadAdError.message}"
                             Log.e(TAG, "Native ad failed to load: $error")
                             currentNativeAd = null
-                            isLoaded = false
-                            adIsLoading = false
                             pendingContainer = null
                             pendingNativeAdView = null
 
@@ -161,8 +153,6 @@ class AdmobStandardNativeAdvanced(
 
         destroyAd(currentNativeAd)
         currentNativeAd = nativeAd
-        isLoaded = true
-        adIsLoading = false
         
         try {
             val responseInfo = nativeAd.javaClass.getMethod("getResponseInfo").invoke(nativeAd) as? com.google.android.gms.ads.ResponseInfo
@@ -208,13 +198,6 @@ class AdmobStandardNativeAdvanced(
         val currentAd = currentNativeAd
         if (currentAd == null) {
             Log.w(TAG, "NativeAd is null. Call load() first")
-            pendingContainer = container
-            pendingNativeAdView = nativeAdView
-            return
-        }
-
-        if (!isLoaded) {
-            Log.w(TAG, "Ad not loaded yet. It will be shown automatically when loaded")
             pendingContainer = container
             pendingNativeAdView = nativeAdView
             return
@@ -461,7 +444,7 @@ class AdmobStandardNativeAdvanced(
     }
 
     override fun isAdLoaded(): Boolean {
-        return isLoaded && currentNativeAd != null
+        return currentNativeAd != null
     }
 
     override fun getCurrentNativeAd(): Any? {
@@ -480,8 +463,6 @@ class AdmobStandardNativeAdvanced(
     override fun destroy() {
         destroyAd(currentNativeAd)
         currentNativeAd = null
-        isLoaded = false
-        adIsLoading = false
         pendingContainer = null
         pendingNativeAdView = null
         Log.d(TAG, "Native ad destroyed")

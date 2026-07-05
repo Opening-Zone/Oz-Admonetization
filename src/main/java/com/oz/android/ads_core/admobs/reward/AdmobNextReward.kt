@@ -26,8 +26,6 @@ class AdmobNextReward(
 ) : AdmobBase<AdmobReward>(context, adUnitId, listener), AdmobReward {
 
     private var nextGenAd: RewardedAd? = null
-    private var isLoaded = false
-    private var adIsLoading = false
 
     // Used only for dispatching library-owned UI operations (show/hide views) to main thread.
     // Listener callbacks are intentionally called on whatever thread they fire — callers decide their own thread.
@@ -38,12 +36,10 @@ class AdmobNextReward(
     }
 
     override fun load() {
-        if (adIsLoading || nextGenAd != null) {
-            Log.d(TAG, "Ad already loading or loaded (Next-Gen)")
+        if (nextGenAd != null) {
+            Log.d(TAG, "Ad already loaded (Next-Gen)")
             return
         }
-
-        adIsLoading = true
 
         RewardedAd.load(
             AdRequest.Builder(adUnitId).build(),
@@ -53,8 +49,6 @@ class AdmobNextReward(
                     // State updates: no UI, safe on BG.
                     Log.d(TAG, "Rewarded ad loaded successfully (Next-Gen)")
                     nextGenAd = ad
-                    isLoaded = true
-                    adIsLoading = false
 
                     // setupNextGenFullScreenCallback only sets a property, safe on BG.
                     setupNextGenFullScreenCallback(ad)
@@ -68,8 +62,6 @@ class AdmobNextReward(
                     // State cleanup: no UI, stays on BG.
                     Log.e(TAG, "Rewarded ad failed to load: ${error.message} (Next-Gen)")
                     nextGenAd = null
-                    isLoaded = false
-                    adIsLoading = false
 
                     // Listener callback: called on GMA BG thread — caller decides thread.
                     listener?.onAdFailedToLoad(error.toOzError())
@@ -90,11 +82,6 @@ class AdmobNextReward(
             val currentAd = nextGenAd
             if (currentAd == null) {
                 Log.w(TAG, "RewardedAd is null (Next-Gen). Call load() first")
-                return@Runnable
-            }
-
-            if (!isLoaded) {
-                Log.w(TAG, "Ad not loaded yet (Next-Gen).")
                 return@Runnable
             }
 
@@ -136,14 +123,12 @@ class AdmobNextReward(
             override fun onAdDismissedFullScreenContent() {
                 Log.d(TAG, "Ad was dismissed (Next-Gen)")
                 nextGenAd = null
-                isLoaded = false
                 listener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
                 Log.e(TAG, "Ad failed to show: ${error.message} (Next-Gen)")
                 nextGenAd = null
-                isLoaded = false
                 listener?.onAdFailedToShowFullScreenContent(error.toOzError())
             }
 
@@ -175,6 +160,6 @@ class AdmobNextReward(
     }
 
     override fun isAdLoaded(): Boolean {
-        return isLoaded && nextGenAd != null
+        return nextGenAd != null
     }
 }
