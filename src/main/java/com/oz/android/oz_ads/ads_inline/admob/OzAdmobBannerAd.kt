@@ -101,10 +101,11 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
         val mergedListener = bannerListener.merge(listener)
 
-        return AdmobBanner.create(context, adUnitId, mergedListener).apply {
-            setCollapsible(collapsiblePosition)
-        }
+        val bannerAd = AdmobBanner.create(context, adUnitId, mergedListener)
+        bannerAd.setCollapsible(collapsiblePosition)
+        return bannerAd
     }
+
 
     override fun onLoadAd(key: String, ad: AdmobBanner) {
         Log.d(TAG, "Loading banner ad for key: $key")

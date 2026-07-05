@@ -25,34 +25,16 @@ class AdmobStandardBanner(
     context: Context,
     adUnitId: String,
     listener: OzAdListener<AdmobBanner>?
-) : AdmobBase<AdmobBanner>(context, adUnitId, listener), AdmobBanner {
+) : AdmobBanner(context, adUnitId, listener) {
     private var adView: AdView? = null
     private var pendingContainer: ViewGroup? = null
     private var containerForSizeCalculation: ViewGroup? = null
     
-    override var collapsiblePosition: String? = null
-        private set
-
     companion object {
         private const val TAG = "AdmobStandardBanner"
     }
 
-    override fun setCollapsible(position: String?) {
-        if (position != null && position != AdmobBanner.COLLAPSIBLE_TOP && position != AdmobBanner.COLLAPSIBLE_BOTTOM) {
-            Log.w(TAG, "Invalid collapsible position: $position. Use COLLAPSIBLE_TOP or COLLAPSIBLE_BOTTOM")
-            return
-        }
-        collapsiblePosition = position
-        Log.d(TAG, "Collapsible banner ${if (position != null) "enabled at $position" else "disabled"}")
-    }
-    
-    override fun setCollapsibleTop() {
-        setCollapsible(AdmobBanner.COLLAPSIBLE_TOP)
-    }
-    
-    override fun setCollapsibleBottom() {
-        setCollapsible(AdmobBanner.COLLAPSIBLE_BOTTOM)
-    }
+
 
     override fun load() {
         load(null)

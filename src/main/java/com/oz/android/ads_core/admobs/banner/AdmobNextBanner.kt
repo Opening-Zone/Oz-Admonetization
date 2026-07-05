@@ -27,7 +27,7 @@ class AdmobNextBanner(
     context: Context,
     adUnitId: String,
     listener: OzAdListener<AdmobBanner>? = null
-) : AdmobBase<AdmobBanner>(context, adUnitId, listener), AdmobBanner {
+) : AdmobBanner(context, adUnitId, listener) {
 
     @Volatile private var adView: AdView? = null
     @Volatile private var pendingContainer: ViewGroup? = null
@@ -37,30 +37,12 @@ class AdmobNextBanner(
     // Listener callbacks are intentionally called on whatever thread they fire — callers decide their own thread.
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    override var collapsiblePosition: String? = null
-        private set
-
     companion object {
         private const val TAG = "AdmobNextBanner"
         const val COLLAPSIBLE_TOP = "top"
         const val COLLAPSIBLE_BOTTOM = "bottom"
     }
 
-    override fun setCollapsible(position: String?) {
-        if (position != null && position != COLLAPSIBLE_TOP && position != COLLAPSIBLE_BOTTOM) {
-            Log.w(TAG, "Invalid collapsible position: $position. Use COLLAPSIBLE_TOP or COLLAPSIBLE_BOTTOM")
-            return
-        }
-        collapsiblePosition = position
-    }
-
-    override fun setCollapsibleTop() {
-        setCollapsible(COLLAPSIBLE_TOP)
-    }
-
-    override fun setCollapsibleBottom() {
-        setCollapsible(COLLAPSIBLE_BOTTOM)
-    }
 
     override fun load() {
         load(null)
