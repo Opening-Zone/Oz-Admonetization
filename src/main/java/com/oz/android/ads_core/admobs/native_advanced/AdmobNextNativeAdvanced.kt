@@ -1,5 +1,6 @@
 package com.oz.android.ads_core.admobs.native_advanced
 
+import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -9,7 +10,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RatingBar
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback
 import com.google.android.libraries.ads.mobile.sdk.common.FullScreenContentError
 import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
@@ -37,12 +37,11 @@ class AdmobNextNativeAdvanced(
     @Volatile private var nextGenNativeAd: NativeAd? = null
     @Volatile private var isLoaded = false
     @Volatile private var adIsLoading = false
-    private var pendingContainer: ViewGroup? = null
-    private var pendingNativeAdView: View? = null
+    @Volatile private var pendingContainer: ViewGroup? = null
+    @Volatile private var pendingNativeAdView: View? = null
     // Custom populate callback stored when using loadThenShow(container, view, callback).
     // Passed to show() when the pending show is triggered after load completes.
-    private var pendingPopulateCallback: ((Any, View) -> Unit)? = null
-    private var onAdLoadedCallback: ((Any) -> Unit)? = null
+    @Volatile private var pendingPopulateCallback: ((Any, View) -> Unit)? = null
     private var mediaAspectRatio: Int? = null
 
     // Used only for dispatching library-owned UI operations (show/hide views) to main thread.
@@ -55,6 +54,12 @@ class AdmobNextNativeAdvanced(
 
     companion object {
         private const val TAG = "AdmobNextNativeAdvanced"
+
+        // Named constants for Media Aspect Ratio (matching GMS Standard values)
+        const val ASPECT_RATIO_ANY = 1
+        const val ASPECT_RATIO_LANDSCAPE = 2
+        const val ASPECT_RATIO_PORTRAIT = 3
+        const val ASPECT_RATIO_SQUARE = 4
     }
 
     override fun load() {
@@ -96,9 +101,10 @@ class AdmobNextNativeAdvanced(
             override fun onNativeAdLoaded(nativeAd: NativeAd) {
                 // ── Runs on GMA background thread ──
                 // Activity lifecycle field reads are safe from any thread.
-                if (context is AppCompatActivity) {
+                if (context is Activity) {
                     if (context.isDestroyed || context.isFinishing || context.isChangingConfigurations) {
                         nativeAd.destroy()
+                        clearPendingState()
                         return
                     }
                 }
@@ -114,7 +120,6 @@ class AdmobNextNativeAdvanced(
 
                 // Listener callbacks: called on GMA BG thread — callers decide their own thread.
                 listener?.onAdLoaded(this@AdmobNextNativeAdvanced)
-                onAdLoadedCallback?.invoke(nativeAd)
 
                 // show() has its own main-thread guard — safe to call from BG.
                 pendingContainer?.let { container ->
@@ -135,11 +140,7 @@ class AdmobNextNativeAdvanced(
                 // State cleanup: no UI, stays on BG.
                 nextGenNativeAd = null
                 isLoaded = false
-                adIsLoading = false
-                pendingContainer = null
-                pendingNativeAdView = null
-                pendingPopulateCallback = null  // clear to prevent stale callback execution
-                onAdLoadedCallback = null  // clear to prevent stale callback execution
+                clearPendingState()
 
                 // Listener callback: called on GMA BG thread — caller decides thread.
                 listener?.onAdFailedToLoad(error.toOzError())
@@ -174,6 +175,7 @@ class AdmobNextNativeAdvanced(
                 Log.w(TAG, "NativeAd is null (Next-Gen). Call load() first")
                 pendingContainer = container
                 pendingNativeAdView = nativeAdView
+                pendingPopulateCallback = populateCallback
                 return@Runnable
             }
 
@@ -181,6 +183,7 @@ class AdmobNextNativeAdvanced(
                 Log.w(TAG, "Ad not loaded yet (Next-Gen). It will be shown automatically when loaded")
                 pendingContainer = container
                 pendingNativeAdView = nativeAdView
+                pendingPopulateCallback = populateCallback
                 return@Runnable
             }
 
@@ -359,12 +362,15 @@ class AdmobNextNativeAdvanced(
         nextGenNativeAd?.destroy()
         nextGenNativeAd = null
         isLoaded = false
+        clearPendingState()
+        Log.d(TAG, "Native ad destroyed")
+    }
+
+    private fun clearPendingState() {
         adIsLoading = false
         pendingContainer = null
         pendingNativeAdView = null
-        pendingPopulateCallback = null  // clear to prevent stale callback execution
-        onAdLoadedCallback = null  // clear to prevent stale callback execution
-        Log.d(TAG, "Native ad destroyed")
+        pendingPopulateCallback = null
     }
 
     private fun checkAndSwapMediaView(rootView: View) {
