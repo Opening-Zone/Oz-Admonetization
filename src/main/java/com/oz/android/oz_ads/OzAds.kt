@@ -202,13 +202,11 @@ abstract class OzAds<AdType> : ViewGroup {
                 Log.d(TAG, "Ad loading for key: $key, setting pending show")
                 // Store the logic to run once loaded
                 OzAdsManager.getInstance().setPendingShow(key) {
-                    val ad: AdType? = OzAdsManager.getInstance().getAd(key)
-                    if (ad != null) {
-                        setAdState(key, AdState.SHOWING)
-                        onShowAds(key, ad)
-                    } else {
-                        onAdShowFailed(key, "Ad disappeared after loading.")
-                    }
+                    showAds(key)
+                }
+                // Close race window: if the ad completed loading while setting the pending show, trigger it.
+                if (getAdState(key) == AdState.LOADED) {
+                    OzAdsManager.getInstance().executePendingShow(key)
                 }
             }
 
@@ -313,6 +311,7 @@ abstract class OzAds<AdType> : ViewGroup {
     protected open fun onAdShown(key: String) {
         Log.d(TAG, "Ad shown successfully for key: $key")
         // State was already set to SHOWING in showAds()
+        OzAdsManager.getInstance().logAdEvent("ad_shown", key)
     }
 
     /**

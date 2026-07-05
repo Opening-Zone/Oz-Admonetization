@@ -57,6 +57,11 @@ class OzAdsManager private constructor(
     private val pendingShows = ConcurrentHashMap<String, () -> Unit>()
 
     // Analytics logger hook (Fix 8)
+    /**
+     * Callback for custom ad event logging.
+     * WARNING: This callback may be invoked from GMA background threads.
+     * Implementations MUST be thread-safe.
+     */
     @Volatile
     var adEventLogger: ((event: String, key: String, reason: String?) -> Unit)? = null
 

@@ -32,7 +32,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
 
     companion object {
         private const val TAG = "AdsOverlayManager"
-        private val DEFAULT_TIME_GAP = if (BuildConfig.DEBUG) 30000L else 30000L
+        private val DEFAULT_TIME_GAP = 30000L
 
         /**
          * Global storage for the last closed time.
@@ -184,6 +184,12 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
     override fun onAdShowBlocked(key: String, reason: String?) {
         super.onAdShowBlocked(key, reason)
         hideLoading()
+    }
+
+    override fun onAdShowFailed(key: String, message: String?) {
+        super.onAdShowFailed(key, message)
+        hideLoading()
+        OzAdsManager.getInstance().onAdsFullScreenDismissed()
     }
 
     /**

@@ -32,6 +32,7 @@ class AdmobStandardInterstitial(
 
     companion object {
         private const val TAG = "AdmobStandardInterstitial"
+        private const val AD_EXPIRATION_HOURS = 1L
     }
 
     override fun load() {
@@ -149,6 +150,6 @@ class AdmobStandardInterstitial(
     }
 
     private fun isAdExpired(): Boolean {
-        return (System.currentTimeMillis() - loadTime) >= 1L * 60L * 60L * 1000L
+        return (System.currentTimeMillis() - loadTime) >= AD_EXPIRATION_HOURS * 60L * 60L * 1000L
     }
 }
