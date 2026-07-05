@@ -276,9 +276,15 @@ class OzAdsManager private constructor(
     /**
      * Suspend until [init] completes, or until [INIT_TIMEOUT_MS] elapses — whichever comes first.
      *
-     * Intended for callers that do not own initialization (e.g. SplashFragment) but need the SDK
-     * to be reasonably ready before loading ads. After the timeout, ads proceed anyway — the SDK
-     * initialization continues in the background and will be fully ready for subsequent requests.
+     * Intended for callers that do not own initialization (e.g. SplashFragment) but need all
+     * mediation adapters to be ready before requesting their first ad. Waiting here is necessary
+     * because mediation adapters perform full initialization inside the SDK callback; requesting
+     * an ad before that callback fires means the adapter inventory is not yet available.
+     *
+     * The timeout guard: if the callback has not fired within [INIT_TIMEOUT_MS] (5 s vs the
+     * typical ~500 ms), the SDK or a mediation adapter is stuck in an abnormal state.
+     * In that case we mark [initialized] = true and proceed anyway — the app must not be blocked
+     * indefinitely, and any adapter that recovers later will still serve ads on subsequent loads.
      *
      * - Returns immediately if already initialized.
      * - Suspends for up to [INIT_TIMEOUT_MS] ms waiting for [init] to signal completion.
@@ -289,6 +295,9 @@ class OzAdsManager private constructor(
 
         val result = withTimeoutOrNull(INIT_TIMEOUT_MS) { initDeferred.await() }
         if (result == null) {
+            // Timeout elapsed — the SDK/mediation adapter is taking abnormally long.
+            // Mark as initialized so subsequent init() calls are not blocked, then proceed.
+            // Adapters that finish later will still serve ads on their next fill opportunity.
             OzLog.w("OzAdsManager", "SDK init timeout after ${INIT_TIMEOUT_MS}ms — proceeding to load ads. Init continues in background.")
             initialized = true
         }
@@ -304,7 +313,20 @@ class OzAdsManager private constructor(
     }
 
     companion object {
-        /** Maximum time to wait for SDK initialization before proceeding to load ads anyway. */
+        /**
+         * Maximum time to wait for the mediation adapters to fully initialize before proceeding.
+         *
+         * Background: AdMob itself is fire-and-forget — calling MobileAds.initialize() is
+         * enough for AdMob-only requests. However, mediation adapters (Meta, AppLovin, etc.)
+         * perform their own full initialization inside the same callback and must complete
+         * before their inventory is available. We therefore wait for the initialization
+         * callback to fire rather than proceeding immediately after calling initialize().
+         *
+         * The timeout exists because in rare race conditions (low-end device + slow network
+         * + heavy mediation stack) the callback can be delayed beyond acceptable UX limits.
+         * Average initialization time in production is ~500 ms; 5 s is deliberately generous
+         * to cover the long tail while still protecting against an indefinite hang.
+         */
         private const val INIT_TIMEOUT_MS = 5_000L
 
         @Volatile
