@@ -24,6 +24,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
     private var currentAdUnitId: String = ""
     private var collapsiblePosition: String? = null
+    private var currentBannerAd: AdmobBanner? = null
 
     companion object {
         private const val TAG = "OzAdmobBannerAd"
@@ -176,6 +177,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
     override fun onShowAds(key: String, ad: AdmobBanner) {
         Log.d(TAG, "Showing banner ad for key: $key")
+        currentBannerAd = ad
         // Show banner in this ViewGroup
         ad.show(this)
         // Notify parent that the ad has been shown
@@ -197,6 +199,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
     override fun onPauseAd() {
         Log.d(TAG, "Pausing all banner ads")
+        currentBannerAd?.pause()
         if (OzAdsManager.getInstance().config.offAdsOnPause) {
             visibility = INVISIBLE
         }
@@ -204,6 +207,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
     override fun onResumeAd() {
         Log.d(TAG, "Resuming all banner ads")
+        currentBannerAd?.resume()
         if (isAdEnable()) {
             visibility = VISIBLE
         } else {
