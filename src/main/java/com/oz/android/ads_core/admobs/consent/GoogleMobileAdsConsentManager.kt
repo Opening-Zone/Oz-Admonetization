@@ -25,6 +25,7 @@ import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.FormError
 import com.google.android.ump.UserMessagingPlatform
 import com.oz.android.ads_core.admobs.AdMobManager
+import com.oz.android.utils.event.OzEventLogger
 
 /**
  * The Google Mobile Ads SDK provides the User Messaging Platform (Google's IAB Certified consent
@@ -70,6 +71,9 @@ class GoogleMobileAdsConsentManager private constructor(context: Context) {
 
         val params = ConsentRequestParameters.Builder().setConsentDebugSettings(debugSettings).build()
 
+        // Log consent check start
+        OzEventLogger.logConsentCheckStart(activity)
+
         // [START request_consent_info_update]
         // Requesting an update to consent information should be called on every app launch.
         consentInformation.requestConsentInfoUpdate(
@@ -77,12 +81,23 @@ class GoogleMobileAdsConsentManager private constructor(context: Context) {
             params,
             {
                 // Called when consent information is successfully updated.
+                OzEventLogger.logConsentCheckSuccess(activity)
                 // [START_EXCLUDE silent]
                 loadAndShowConsentFormIfRequired(activity, onConsentGatheringCompleteListener)
                 // [END_EXCLUDE]
             },
             { requestConsentError ->
                 // Called when there's an error updating consent information.
+                OzEventLogger.logConsentCheckFailed(
+                    activity,
+                    requestConsentError.errorCode,
+                    requestConsentError.message
+                )
+                if (canRequestAds) {
+                    OzEventLogger.logConsentAdsReady(activity)
+                } else {
+                    OzEventLogger.logConsentAdsBlocked(activity, requestConsentError.message)
+                }
                 // [START_EXCLUDE silent]
                 onConsentGatheringCompleteListener.consentGatheringComplete(requestConsentError)
                 // [END_EXCLUDE]
@@ -95,9 +110,16 @@ class GoogleMobileAdsConsentManager private constructor(context: Context) {
         activity: Activity,
         onConsentGatheringCompleteListener: OnConsentGatheringCompleteListener,
     ) {
+        OzEventLogger.logConsentFormShow(activity)
         // [START load_and_show_consent_form]
         UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { formError ->
             // Consent gathering process is complete.
+            OzEventLogger.logConsentFormClosed(activity, formError?.message)
+            if (canRequestAds) {
+                OzEventLogger.logConsentAdsReady(activity)
+            } else {
+                OzEventLogger.logConsentAdsBlocked(activity, formError?.message)
+            }
             // [START_EXCLUDE silent]
             onConsentGatheringCompleteListener.consentGatheringComplete(formError)
             // [END_EXCLUDE]
@@ -110,8 +132,12 @@ class GoogleMobileAdsConsentManager private constructor(context: Context) {
         activity: Activity,
         onConsentFormDismissedListener: OnConsentFormDismissedListener,
     ) {
+        OzEventLogger.logConsentFormShow(activity)
         // [START present_privacy_options_form]
-        UserMessagingPlatform.showPrivacyOptionsForm(activity, onConsentFormDismissedListener)
+        UserMessagingPlatform.showPrivacyOptionsForm(activity) { formError ->
+            OzEventLogger.logConsentFormClosed(activity, formError?.message)
+            onConsentFormDismissedListener.onConsentFormDismissed(formError)
+        }
         // [END present_privacy_options_form]
     }
 

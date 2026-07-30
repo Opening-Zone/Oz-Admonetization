@@ -3,7 +3,7 @@ package com.oz.android.ads_core.admobs.banner
 import android.app.Activity
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.ViewGroup
 import androidx.window.layout.WindowMetricsCalculator
 import com.google.android.gms.ads.AdListener
@@ -42,14 +42,14 @@ class AdmobStandardBanner(
 
     override fun load(container: ViewGroup?) {
         if (adView != null) {
-            Log.d(TAG, "Ad already loaded")
+            OzLog.d(TAG, "Ad already loaded")
             return
         }
 
         containerForSizeCalculation = container
 
         if (container != null && (container.width == 0 || container.height == 0)) {
-            Log.d(TAG, "Container not measured yet, waiting for layout...")
+            OzLog.d(TAG, "Container not measured yet, waiting for layout...")
             container.post {
                 createAndLoadAdView()
             }
@@ -61,7 +61,7 @@ class AdmobStandardBanner(
     private fun createAndLoadAdView() {
         if (adView == null) {
             val adSize = calculateAdSize()
-            Log.d(TAG, "Creating AdView with size: ${adSize.width}dp x ${adSize.height}dp")
+            OzLog.d(TAG, "Creating AdView with size: ${adSize.width}dp x ${adSize.height}dp")
 
             val standardAdView = AdView(context).apply {
                 this.adUnitId = this@AdmobStandardBanner.adUnitId
@@ -76,7 +76,7 @@ class AdmobStandardBanner(
                 }
                 adListener = object : AdListener() {
                     override fun onAdLoaded() {
-                        Log.d(TAG, "Banner ad loaded successfully")
+                        OzLog.d(TAG, "Banner ad loaded successfully")
                         listener?.onAdLoaded(this@AdmobStandardBanner)
 
                         pendingContainer?.let { container ->
@@ -86,18 +86,18 @@ class AdmobStandardBanner(
                     }
 
                     override fun onAdFailedToLoad(error: LoadAdError) {
-                        Log.e(TAG, "Banner ad failed to load: ${error.message}")
+                        OzLog.e(TAG, "Banner ad failed to load: ${error.message}")
                         listener?.onAdFailedToLoad(error.toOzError())
                         pendingContainer = null
                     }
 
                     override fun onAdClicked() {
-                        Log.d(TAG, "Banner ad was clicked")
+                        OzLog.d(TAG, "Banner ad was clicked")
                         listener?.onAdClicked()
                     }
 
                     override fun onAdImpression() {
-                        Log.d(TAG, "Banner ad recorded an impression")
+                        OzLog.d(TAG, "Banner ad recorded an impression")
                         listener?.onAdImpression()
                     }
                 }
@@ -108,7 +108,7 @@ class AdmobStandardBanner(
         val standardAdView = adView as AdView
         val adRequest = buildAdRequest()
         standardAdView.loadAd(adRequest)
-        Log.d(TAG, "Banner ad loading started${if (collapsiblePosition != null) " (collapsible: $collapsiblePosition)" else ""}")
+        OzLog.d(TAG, "Banner ad loading started${if (collapsiblePosition != null) " (collapsible: $collapsiblePosition)" else ""}")
     }
 
     override fun show() {
@@ -118,7 +118,7 @@ class AdmobStandardBanner(
     override fun show(container: ViewGroup) {
         val currentAdView = adView
         if (currentAdView == null) {
-            Log.w(TAG, "AdView not ready. It will be shown automatically when loaded")
+            OzLog.w(TAG, "AdView not ready. It will be shown automatically when loaded")
             pendingContainer = container
             return
         }
@@ -130,7 +130,7 @@ class AdmobStandardBanner(
 
         container.removeAllViews()
         container.addView(currentAdView)
-        Log.d(TAG, "Banner ad displayed in container")
+        OzLog.d(TAG, "Banner ad displayed in container")
     }
 
     override fun loadThenShow() {
@@ -174,7 +174,7 @@ class AdmobStandardBanner(
         val adRequest = if (collapsiblePosition != null) {
             val extras = Bundle()
             extras.putString("collapsible", collapsiblePosition)
-            Log.d(TAG, "Creating AdRequest with collapsible: $collapsiblePosition")
+            OzLog.d(TAG, "Creating AdRequest with collapsible: $collapsiblePosition")
             AdRequest.Builder()
                 .addNetworkExtrasBundle(AdMobAdapter::class.java, extras)
                 .build()
@@ -201,7 +201,7 @@ class AdmobStandardBanner(
             }
         }
         
-        Log.d(TAG, "AdSize calculated: ${adSize.width}dp x ${adSize.height}dp")
+        OzLog.d(TAG, "AdSize calculated: ${adSize.width}dp x ${adSize.height}dp")
         return adSize
     }
 

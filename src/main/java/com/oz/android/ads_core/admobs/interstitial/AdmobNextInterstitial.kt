@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback
 import com.google.android.libraries.ads.mobile.sdk.common.AdRequest
 import com.google.android.libraries.ads.mobile.sdk.common.FullScreenContentError
@@ -38,7 +38,7 @@ class AdmobNextInterstitial(
 
     override fun load() {
         if (nextGenAd != null) {
-            Log.d(TAG, "Ad already loaded (Next-Gen)")
+            OzLog.d(TAG, "Ad already loaded (Next-Gen)")
             return
         }
 
@@ -48,7 +48,7 @@ class AdmobNextInterstitial(
                 override fun onAdLoaded(ad: InterstitialAd) {
                     // ── Runs on GMA background thread ──
                     // State updates: no UI, safe on BG.
-                    Log.d(TAG, "Interstitial ad loaded successfully (Next-Gen)")
+                    OzLog.d(TAG, "Interstitial ad loaded successfully (Next-Gen)")
                     nextGenAd = ad
                     loadTime = System.currentTimeMillis()
 
@@ -64,7 +64,7 @@ class AdmobNextInterstitial(
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     // ── Runs on GMA background thread ──
                     // State cleanup: no UI, stays on BG.
-                    Log.e(TAG, "Interstitial ad failed to load: ${error.message} (Next-Gen)")
+                    OzLog.e(TAG, "Interstitial ad failed to load: ${error.message} (Next-Gen)")
                     nextGenAd = null
 
                     // OzLoadingDialog is library-owned UI — must be on main.
@@ -77,19 +77,19 @@ class AdmobNextInterstitial(
     }
 
     override fun show() {
-        Log.w(TAG, "show() called without activity. Use show(activity: Activity) for interstitial ads")
+        OzLog.w(TAG, "show() called without activity. Use show(activity: Activity) for interstitial ads")
     }
 
     override fun show(activity: Activity) {
         val showRunnable = Runnable {
             val currentAd = nextGenAd
             if (currentAd == null || isAdExpired()) {
-                Log.w(TAG, "InterstitialAd is null or expired (Next-Gen). Call load() first")
+                OzLog.w(TAG, "InterstitialAd is null or expired (Next-Gen). Call load() first")
                 return@Runnable
             }
             currentAd.show(activity)
             listener?.onNextAction()
-            Log.d(TAG, "Interstitial ad displayed (Next-Gen)")
+            OzLog.d(TAG, "Interstitial ad displayed (Next-Gen)")
         }
 
         // Self-dispatches to main — safe to call from any thread.
@@ -101,7 +101,7 @@ class AdmobNextInterstitial(
     }
 
     override fun loadThenShow() {
-        Log.w(TAG, "loadThenShow() is not supported on AdmobNextInterstitial.")
+        OzLog.w(TAG, "loadThenShow() is not supported on AdmobNextInterstitial.")
     }
 
     override fun loadThenShow(activity: Activity, showOverlay: Boolean) {
@@ -125,29 +125,29 @@ class AdmobNextInterstitial(
         ad.adEventCallback = object : InterstitialAdEventCallback {
             // All callbacks fire on GMA BG thread — callers decide their own threading.
             override fun onAdDismissedFullScreenContent() {
-                Log.d(TAG, "Ad was dismissed (Next-Gen)")
+                OzLog.d(TAG, "Ad was dismissed (Next-Gen)")
                 nextGenAd = null
                 listener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
-                Log.e(TAG, "Ad failed to show: ${error.message} (Next-Gen)")
+                OzLog.e(TAG, "Ad failed to show: ${error.message} (Next-Gen)")
                 nextGenAd = null
                 listener?.onAdFailedToShowFullScreenContent(error.toOzError())
             }
 
             override fun onAdShowedFullScreenContent() {
-                Log.d(TAG, "Ad showed fullscreen content (Next-Gen)")
+                OzLog.d(TAG, "Ad showed fullscreen content (Next-Gen)")
                 listener?.onAdShowedFullScreenContent()
             }
 
             override fun onAdImpression() {
-                Log.d(TAG, "Ad recorded an impression (Next-Gen)")
+                OzLog.d(TAG, "Ad recorded an impression (Next-Gen)")
                 listener?.onAdImpression()
             }
 
             override fun onAdClicked() {
-                Log.d(TAG, "Ad was clicked (Next-Gen)")
+                OzLog.d(TAG, "Ad was clicked (Next-Gen)")
                 listener?.onAdClicked()
             }
 

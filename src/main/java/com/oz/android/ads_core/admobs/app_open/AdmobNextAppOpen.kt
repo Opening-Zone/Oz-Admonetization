@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback
 import com.google.android.libraries.ads.mobile.sdk.common.AdRequest
 import com.google.android.libraries.ads.mobile.sdk.common.FullScreenContentError
@@ -41,7 +41,7 @@ class AdmobNextAppOpen(
 
     override fun load() {
         if (adIsLoading || isAdAvailable()) {
-            Log.d(TAG, "Ad already loading or available (Next-Gen)")
+            OzLog.d(TAG, "Ad already loading or available (Next-Gen)")
             return
         }
 
@@ -53,7 +53,7 @@ class AdmobNextAppOpen(
                 override fun onAdLoaded(ad: AppOpenAd) {
                     // ── Runs on GMA background thread ──
                     // State updates: no UI, safe on BG.
-                    Log.d(TAG, "App Open ad loaded successfully (Next-Gen)")
+                    OzLog.d(TAG, "App Open ad loaded successfully (Next-Gen)")
                     nextGenAd = ad
                     isLoaded = true
                     adIsLoading = false
@@ -66,7 +66,7 @@ class AdmobNextAppOpen(
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     // ── Runs on GMA background thread ──
                     // State cleanup: no UI, stays on BG.
-                    Log.e(TAG, "App Open ad failed to load: ${error.message} (Next-Gen)")
+                    OzLog.e(TAG, "App Open ad failed to load: ${error.message} (Next-Gen)")
                     nextGenAd = null
                     isLoaded = false
                     adIsLoading = false
@@ -80,23 +80,23 @@ class AdmobNextAppOpen(
     }
 
     override fun show() {
-        Log.w(TAG, "show() called without activity. Use show(activity: Activity) for App Open ads")
+        OzLog.w(TAG, "show() called without activity. Use show(activity: Activity) for App Open ads")
     }
 
     override fun show(activity: Activity) {
         val showRunnable = Runnable {
             if (isShowingAd) {
-                Log.d(TAG, "The app open ad is already showing (Next-Gen).")
+                OzLog.d(TAG, "The app open ad is already showing (Next-Gen).")
                 return@Runnable
             }
 
             if (!isAdAvailable()) {
-                Log.d(TAG, "The app open ad is not ready yet (Next-Gen).")
+                OzLog.d(TAG, "The app open ad is not ready yet (Next-Gen).")
                 return@Runnable
             }
 
             val currentAd = nextGenAd ?: run {
-                Log.w(TAG, "AppOpenAd is null (Next-Gen). Call load() first")
+                OzLog.w(TAG, "AppOpenAd is null (Next-Gen). Call load() first")
                 return@Runnable
             }
 
@@ -105,7 +105,7 @@ class AdmobNextAppOpen(
             isShowingAd = true
             currentAd.show(activity)
             listener?.onNextAction()
-            Log.d(TAG, "App Open ad displayed (Next-Gen)")
+            OzLog.d(TAG, "App Open ad displayed (Next-Gen)")
         }
 
         // Self-dispatches to main — safe to call from any thread.
@@ -117,7 +117,7 @@ class AdmobNextAppOpen(
     }
 
     override fun loadThenShow() {
-        Log.w(TAG, "loadThenShow() is not supported on AdmobNextAppOpen.")
+        OzLog.w(TAG, "loadThenShow() is not supported on AdmobNextAppOpen.")
     }
 
     override fun loadThenShow(activity: Activity) {
@@ -138,7 +138,7 @@ class AdmobNextAppOpen(
         ad.adEventCallback = object : AppOpenAdEventCallback {
             // All callbacks fire on GMA BG thread — callers decide their own threading.
             override fun onAdDismissedFullScreenContent() {
-                Log.d(TAG, "Ad was dismissed (Next-Gen)")
+                OzLog.d(TAG, "Ad was dismissed (Next-Gen)")
                 nextGenAd = null
                 isLoaded = false
                 isShowingAd = false
@@ -146,7 +146,7 @@ class AdmobNextAppOpen(
             }
 
             override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
-                Log.e(TAG, "Ad failed to show: ${error.message} (Next-Gen)")
+                OzLog.e(TAG, "Ad failed to show: ${error.message} (Next-Gen)")
                 nextGenAd = null
                 isLoaded = false
                 isShowingAd = false
@@ -154,17 +154,17 @@ class AdmobNextAppOpen(
             }
 
             override fun onAdShowedFullScreenContent() {
-                Log.d(TAG, "Ad showed fullscreen content (Next-Gen)")
+                OzLog.d(TAG, "Ad showed fullscreen content (Next-Gen)")
                 listener?.onAdShowedFullScreenContent()
             }
 
             override fun onAdImpression() {
-                Log.d(TAG, "Ad recorded an impression (Next-Gen)")
+                OzLog.d(TAG, "Ad recorded an impression (Next-Gen)")
                 listener?.onAdImpression()
             }
 
             override fun onAdClicked() {
-                Log.d(TAG, "Ad was clicked (Next-Gen)")
+                OzLog.d(TAG, "Ad was clicked (Next-Gen)")
                 listener?.onAdClicked()
             }
 

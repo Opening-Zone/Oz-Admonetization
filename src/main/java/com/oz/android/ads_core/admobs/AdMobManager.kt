@@ -56,6 +56,9 @@ class AdMobManager private constructor() {
             return
         }
 
+        val startTime = System.currentTimeMillis()
+        com.oz.android.utils.event.OzEventLogger.logAdsSdkInitStart(context, "AdMob_Standard")
+
         // Initialize standard GMS MobileAds reflectively
         try {
             OzLog.d(TAG, "Initializing GMS Mobile Ads SDK reflectively...")
@@ -67,7 +70,9 @@ class AdMobManager private constructor() {
                 arrayOf(listenerClass)
             ) { _, method, args ->
                 if (method.name == "onInitializationComplete") {
+                    val duration = System.currentTimeMillis() - startTime
                     OzLog.d(TAG, "✅ Standard GMS Mobile Ads SDK initialized — logging adapter statuses:")
+                    com.oz.android.utils.event.OzEventLogger.logAdsSdkInitComplete(context, duration)
                     // args[0] is an InitializationStatus object with getAdapterStatusMap()
                     logAdapterStatuses(args?.getOrNull(0))
                     onComplete()
@@ -83,6 +88,7 @@ class AdMobManager private constructor() {
             initializeMethod.invoke(null, context, proxyListener)
         } catch (e: Exception) {
             OzLog.e(TAG, "Failed to initialize GMS MobileAds reflectively", e)
+            com.oz.android.utils.event.OzEventLogger.logAdsSdkInitException(context, e.message)
             onComplete()
         }
 

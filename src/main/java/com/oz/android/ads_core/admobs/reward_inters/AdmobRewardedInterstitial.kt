@@ -2,7 +2,7 @@ package com.oz.android.ads_core.admobs.reward_inters
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -12,6 +12,7 @@ import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback
 import com.oz.android.ads_core.admobs.AdmobBase
 import com.oz.android.utils.listener.OzAdListener
+import com.oz.android.utils.event.OzEventLogger
 
 /**
  * Class managing rewarded interstitial ads from AdMob
@@ -35,9 +36,11 @@ class AdmobRewardedInterstitial(
     override fun load() {
         // Request a new ad if one isn't already loaded or loading
         if (rewardedInterstitialAd != null) {
-            Log.d(TAG, "Ad already loaded")
+            OzLog.d(TAG, "Ad already loaded")
             return
         }
+
+        OzEventLogger.logAdRequest(context, adUnitId, "rewarded_interstitial")
 
         RewardedInterstitialAd.load(
             context,
@@ -45,16 +48,18 @@ class AdmobRewardedInterstitial(
             AdRequest.Builder().build(),
             object : RewardedInterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedInterstitialAd) {
-                    Log.d(TAG, "Rewarded interstitial ad loaded successfully")
+                    OzLog.d(TAG, "Rewarded interstitial ad loaded successfully")
                     rewardedInterstitialAd = ad
 
+                    OzEventLogger.logAdLoadSuccess(context, adUnitId, "rewarded_interstitial")
                     // Setup FullScreenContentCallback
                     setupFullScreenContentCallback(ad)
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    Log.e(TAG, "Rewarded interstitial ad failed to load: ${adError.message}")
+                    OzLog.e(TAG, "Rewarded interstitial ad failed to load: ${adError.message}")
                     rewardedInterstitialAd = null
+                    OzEventLogger.logAdLoadFailed(context, adUnitId, "rewarded_interstitial", adError.code, adError.message)
                 }
             }
         )
@@ -65,7 +70,7 @@ class AdmobRewardedInterstitial(
      * Note: Reward interstitial ad requires an Activity and a callback, use show(activity, callback) instead of this method
      */
     override fun show() {
-        Log.w(
+        OzLog.w(
             TAG,
             "show() called without activity and callback. Use show(activity: Activity, callback: (RewardItem) -> Unit) for rewarded interstitial ads"
         )
@@ -79,16 +84,20 @@ class AdmobRewardedInterstitial(
     fun show(activity: Activity, rewardCallback: (RewardItem) -> Unit) {
         val currentAd = rewardedInterstitialAd
         if (currentAd == null) {
-            Log.w(TAG, "RewardedInterstitialAd is null. Call load() first")
+            OzLog.w(TAG, "RewardedInterstitialAd is null. Call load() first")
+            OzEventLogger.logAdSkip(context, adUnitId, "rewarded_interstitial", "ad_null")
             return
         }
 
+        OzEventLogger.logAdShowCalled(context, adUnitId, "rewarded_interstitial")
+
         // Show the ad
         currentAd.show(activity) { rewardItem ->
-            Log.d(TAG, "User earned the reward: ${rewardItem.amount} ${rewardItem.type}")
+            OzLog.d(TAG, "User earned the reward: ${rewardItem.amount} ${rewardItem.type}")
+            OzEventLogger.logAdRewardEarned(context, adUnitId, rewardItem.type, rewardItem.amount)
             rewardCallback.invoke(rewardItem)
         }
-        Log.d(TAG, "Rewarded interstitial ad displayed")
+        OzLog.d(TAG, "Rewarded interstitial ad displayed")
     }
 
     /**
@@ -96,7 +105,7 @@ class AdmobRewardedInterstitial(
      * Note: Reward interstitial ad requires an Activity and a callback, use loadThenShow(activity, callback) instead of this method
      */
     override fun loadThenShow() {
-        Log.w(
+        OzLog.w(
             TAG,
             "loadThenShow() called without activity and callback. Use loadThenShow(activity: Activity, callback: (RewardItem) -> Unit) for rewarded interstitial ads"
         )
@@ -118,33 +127,37 @@ class AdmobRewardedInterstitial(
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 // Called when fullscreen content is dismissed
-                Log.d(TAG, "Ad was dismissed")
+                OzLog.d(TAG, "Ad was dismissed")
                 // Don't forget to set the ad reference to null so you
                 // don't show the ad a second time
                 rewardedInterstitialAd = null
+                OzEventLogger.logAdDismissed(context, adUnitId, "rewarded_interstitial")
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
                 // Called when fullscreen content failed to show
-                Log.e(TAG, "Ad failed to show: ${adError.message}")
+                OzLog.e(TAG, "Ad failed to show: ${adError.message}")
                 // Don't forget to set the ad reference to null so you
                 // don't show the ad a second time
                 rewardedInterstitialAd = null
+                OzEventLogger.logAdShowFailed(context, adUnitId, "rewarded_interstitial", adError.code, adError.message)
             }
 
             override fun onAdShowedFullScreenContent() {
                 // Called when fullscreen content is shown
-                Log.d(TAG, "Ad showed fullscreen content")
+                OzLog.d(TAG, "Ad showed fullscreen content")
+                OzEventLogger.logAdShowSuccess(context, adUnitId, "rewarded_interstitial")
             }
 
             override fun onAdImpression() {
                 // Called when an impression is recorded for an ad
-                Log.d(TAG, "Ad recorded an impression")
+                OzLog.d(TAG, "Ad recorded an impression")
             }
 
             override fun onAdClicked() {
                 // Called when ad is clicked
-                Log.d(TAG, "Ad was clicked")
+                OzLog.d(TAG, "Ad was clicked")
+                OzEventLogger.logAdClickedCustom(context, adUnitId, "rewarded_interstitial")
             }
         }
     }

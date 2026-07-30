@@ -2,7 +2,7 @@ package com.oz.android.ads_core.admobs.app_open
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -36,7 +36,7 @@ class AdmobStandardAppOpen(
 
     override fun load() {
         if (adIsLoading || isAdAvailable()) {
-            Log.d(TAG, "Ad already loading or available")
+            OzLog.d(TAG, "Ad already loading or available")
             return
         }
 
@@ -48,7 +48,7 @@ class AdmobStandardAppOpen(
             AdRequest.Builder().build(),
             object : AppOpenAdLoadCallback() {
                 override fun onAdLoaded(ad: AppOpenAd) {
-                    Log.d(TAG, "App Open ad loaded successfully")
+                    OzLog.d(TAG, "App Open ad loaded successfully")
                     appOpenAd = ad
                     appOpenAd?.onPaidEventListener = getOnPaidListener(appOpenAd!!.responseInfo)
                     isLoaded = true
@@ -59,7 +59,7 @@ class AdmobStandardAppOpen(
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    Log.e(TAG, "App Open ad failed to load: ${adError.message}")
+                    OzLog.e(TAG, "App Open ad failed to load: ${adError.message}")
                     appOpenAd = null
                     isLoaded = false
                     adIsLoading = false
@@ -72,22 +72,22 @@ class AdmobStandardAppOpen(
     }
 
     override fun show() {
-        Log.w(TAG, "show() called without activity. Use show(activity: Activity) for App Open ads")
+        OzLog.w(TAG, "show() called without activity. Use show(activity: Activity) for App Open ads")
     }
 
     override fun show(activity: Activity) {
         if (isShowingAd) {
-            Log.d(TAG, "The app open ad is already showing.")
+            OzLog.d(TAG, "The app open ad is already showing.")
             return
         }
 
         if (!isAdAvailable()) {
-            Log.d(TAG, "The app open ad is not ready yet.")
+            OzLog.d(TAG, "The app open ad is not ready yet.")
             return
         }
 
         val currentAd = appOpenAd ?: run {
-            Log.w(TAG, "AppOpenAd is null. Call load() first")
+            OzLog.w(TAG, "AppOpenAd is null. Call load() first")
             return
         }
 
@@ -96,11 +96,11 @@ class AdmobStandardAppOpen(
         isShowingAd = true
         currentAd.show(activity)
         listener?.onNextAction()
-        Log.d(TAG, "App Open ad displayed")
+        OzLog.d(TAG, "App Open ad displayed")
     }
 
     override fun loadThenShow() {
-        Log.w(TAG, "loadThenShow() is not supported on AdmobStandardAppOpen. Use OzAdmobAppOpenAd instead.")
+        OzLog.w(TAG, "loadThenShow() is not supported on AdmobStandardAppOpen. Use OzAdmobAppOpenAd instead.")
     }
 
     override fun loadThenShow(activity: Activity) {
@@ -120,7 +120,7 @@ class AdmobStandardAppOpen(
     private fun setupFullScreenContentCallback(ad: AppOpenAd) {
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
-                Log.d(TAG, "Ad was dismissed")
+                OzLog.d(TAG, "Ad was dismissed")
                 appOpenAd = null
                 isLoaded = false
                 isShowingAd = false
@@ -128,7 +128,7 @@ class AdmobStandardAppOpen(
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                Log.e(TAG, "Ad failed to show: ${adError.message}")
+                OzLog.e(TAG, "Ad failed to show: ${adError.message}")
                 appOpenAd = null
                 isLoaded = false
                 isShowingAd = false
@@ -136,17 +136,17 @@ class AdmobStandardAppOpen(
             }
 
             override fun onAdShowedFullScreenContent() {
-                Log.d(TAG, "Ad showed fullscreen content")
+                OzLog.d(TAG, "Ad showed fullscreen content")
                 listener?.onAdShowedFullScreenContent()
             }
 
             override fun onAdImpression() {
-                Log.d(TAG, "Ad recorded an impression")
+                OzLog.d(TAG, "Ad recorded an impression")
                 listener?.onAdImpression()
             }
 
             override fun onAdClicked() {
-                Log.d(TAG, "Ad was clicked")
+                OzLog.d(TAG, "Ad was clicked")
                 listener?.onAdClicked()
             }
         }

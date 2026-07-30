@@ -3,7 +3,7 @@ package com.oz.android.oz_ads.ads_overlay.admob
 import android.app.Activity
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.oz.android.utils.listener.OzAdListener
 import com.oz.android.ads_core.admobs.app_open.AdmobAppOpen
 import com.oz.android.oz_ads.ads_overlay.OverlayAds
@@ -38,7 +38,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
     fun setAdUnitId(key: String, adUnitId: String) {
         setPreloadKey(key)
         this.currentAdUnitId = adUnitId
-        Log.d(TAG, "Ad unit ID set for key: $key -> $adUnitId")
+        OzLog.d(TAG, "Ad unit ID set for key: $key -> $adUnitId")
     }
 
     /**
@@ -48,7 +48,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
      */
     fun setActivity(key: String, activity: Activity) {
         this.currentActivity = activity
-        Log.d(TAG, "Activity set for key: $key")
+        OzLog.d(TAG, "Activity set for key: $key")
     }
 
     /**
@@ -60,7 +60,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
         adKey?.let { key ->
             setActivity(key, activity)
             showAds(key)
-        } ?: Log.w(TAG, "show() called but no adKey is set. Use setAdUnitId() first.")
+        } ?: OzLog.w(TAG, "show() called but no adKey is set. Use setAdUnitId() first.")
     }
 
     /**
@@ -72,7 +72,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
         adKey?.let { key ->
             setActivity(key, activity)
             loadThenShow()
-        } ?: Log.w(TAG, "loadThenShow() called but no adKey is set. Use setAdUnitId() first.")
+        } ?: OzLog.w(TAG, "loadThenShow() called but no adKey is set. Use setAdUnitId() first.")
     }
 
     /**
@@ -83,7 +83,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
         val adUnitId = currentAdUnitId
 
         if (adUnitId.isNullOrBlank()) {
-            Log.e(TAG, "Ad unit ID is not set for key: $key")
+            OzLog.e(TAG, "Ad unit ID is not set for key: $key")
             onAdLoadFailed(key, "Ad unit ID not set")
             return null
         }
@@ -131,7 +131,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
      * Only implements the network-specific load call, no business logic.
      */
     override fun onLoadAd(key: String, ad: AdmobAppOpen) {
-        Log.d(TAG, "Loading App Open ad for key: $key")
+        OzLog.d(TAG, "Loading App Open ad for key: $key")
         ad.load()
     }
 
@@ -143,12 +143,12 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
     override fun onShowAds(key: String, ad: AdmobAppOpen) {
         val activity = currentActivity
         if (activity == null) {
-            Log.e(TAG, "Cannot show App Open ad for key '$key' because activity is null. Call setActivity() first.")
+            OzLog.e(TAG, "Cannot show App Open ad for key '$key' because activity is null. Call setActivity() first.")
             onAdShowFailed(key, "Activity is null")
             return
         }
 
-        Log.d(TAG, "Showing App Open ad for key: $key")
+        OzLog.d(TAG, "Showing App Open ad for key: $key")
         ad.show(activity)
     }
 
@@ -157,7 +157,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
      * Only implements the network-specific cleanup, no business logic.
      */
     override fun destroyAd(ad: AdmobAppOpen) {
-        Log.d(TAG, "Destroying App Open ad")
+        OzLog.d(TAG, "Destroying App Open ad")
         // App Open ads are one-time use objects.
     }
 
@@ -169,7 +169,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
         super.onAdShowBlocked(key, reason)
         currentActivity = null
         listener?.onNextAction()
-        Log.d(TAG, "Cleaned up activity reference for key: $key after show blocked")
+        OzLog.d(TAG, "Cleaned up activity reference for key: $key after show blocked")
     }
 
     /**
@@ -178,7 +178,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
     override fun onAdDismissed(key: String) {
         super.onAdDismissed(key)
         currentActivity = null
-        Log.d(TAG, "Cleaned up activity reference for key: $key")
+        OzLog.d(TAG, "Cleaned up activity reference for key: $key")
     }
 
     /**
@@ -196,7 +196,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
         super.onAdShowFailed(key, message)
         currentActivity = null
         listener?.onNextAction()
-        Log.d(TAG, "Cleaned up activity reference for key: $key after show failed")
+        OzLog.d(TAG, "Cleaned up activity reference for key: $key after show failed")
     }
 
     /**

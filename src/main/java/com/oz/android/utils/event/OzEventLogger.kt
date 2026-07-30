@@ -2,7 +2,7 @@ package com.oz.android.utils.event
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.google.android.gms.ads.AdValue
 import com.google.android.gms.ads.ResponseInfo
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -10,6 +10,217 @@ import com.google.firebase.analytics.FirebaseAnalytics
 object OzEventLogger {
 
     private const val TAG = "OzAdsEventLogger"
+
+    private fun logSimpleEvent(context: Context, eventName: String, params: Bundle? = null) {
+        try {
+            OzLog.d(TAG, "Logging event '$eventName' params: ${params ?: "none"}")
+            FirebaseAnalytics.getInstance(context).logEvent(eventName, params ?: Bundle())
+        } catch (e: Exception) {
+            OzLog.e(TAG, "Error logging event '$eventName' to Firebase Analytics", e)
+        }
+    }
+
+    private fun buildAdParams(
+        adUnitId: String?,
+        adFormat: String?,
+        key: String?,
+        errorCode: Int? = null,
+        errorMessage: String? = null,
+        reason: String? = null
+    ): Bundle {
+        return Bundle().apply {
+            adUnitId?.let { putString("ad_unit_id", it) }
+            adFormat?.let { putString("ad_format", it) }
+            key?.let { putString("ad_key", it) }
+            errorCode?.let { putInt("error_code", it) }
+            errorMessage?.let { putString("error_message", it) }
+            reason?.let { putString("reason", it) }
+        }
+    }
+
+    // --- Consent Events ---
+
+    fun logConsentCheckStart(context: Context) {
+        logSimpleEvent(context, "consent_check_start")
+    }
+
+    fun logConsentCheckSuccess(context: Context) {
+        logSimpleEvent(context, "consent_check_success")
+    }
+
+    fun logConsentCheckFailed(context: Context, errorCode: Int? = null, errorMessage: String? = null) {
+        val params = Bundle().apply {
+            errorCode?.let { putInt("error_code", it) }
+            errorMessage?.let { putString("error_message", it) }
+        }
+        logSimpleEvent(context, "consent_check_failed", params)
+    }
+
+    fun logConsentFormShow(context: Context) {
+        logSimpleEvent(context, "consent_form_show")
+    }
+
+    fun logConsentFormClosed(context: Context, errorMessage: String? = null) {
+        val params = Bundle().apply {
+            errorMessage?.let { putString("error_message", it) }
+        }
+        logSimpleEvent(context, "consent_form_closed", params)
+    }
+
+    fun logConsentAdsReady(context: Context) {
+        logSimpleEvent(context, "consent_ads_ready")
+    }
+
+    fun logConsentAdsBlocked(context: Context, reason: String? = null) {
+        val params = Bundle().apply {
+            reason?.let { putString("reason", it) }
+        }
+        logSimpleEvent(context, "consent_ads_blocked", params)
+    }
+
+    // --- Ads SDK Initialization Events ---
+
+    fun logAdsSdkInitStart(context: Context, sdkType: String = "AdMob") {
+        val params = Bundle().apply { putString("sdk_type", sdkType) }
+        logSimpleEvent(context, "ads_sdk_init_start", params)
+    }
+
+    fun logAdsSdkInitComplete(context: Context, durationMs: Long? = null) {
+        val params = Bundle().apply { durationMs?.let { putLong("duration_ms", it) } }
+        logSimpleEvent(context, "ads_sdk_init_complete", params)
+    }
+
+    fun logAdsSdkInitException(context: Context, errorMessage: String? = null) {
+        val params = Bundle().apply { errorMessage?.let { putString("error_message", it) } }
+        logSimpleEvent(context, "ads_sdk_init_exception", params)
+    }
+
+    // --- Ad Flow & Lifecycle Events ---
+
+    fun logAdOpportunity(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_opportunity", buildAdParams(adUnitId, adFormat, key))
+    }
+
+    fun logAdSkip(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        reason: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_skip", buildAdParams(adUnitId, adFormat, key, reason = reason))
+    }
+
+    fun logAdRequest(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_request", buildAdParams(adUnitId, adFormat, key))
+    }
+
+    fun logAdLoadSuccess(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_load_success", buildAdParams(adUnitId, adFormat, key))
+    }
+
+    fun logAdLoadFailed(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        errorCode: Int? = null,
+        errorMessage: String? = null,
+        key: String? = null
+    ) {
+        val eventName = when (errorCode) {
+            3 -> "ad_load_failed_no_fill"
+            2 -> "ad_load_failed_network"
+            1 -> "ad_load_failed_invalid_request"
+            0 -> "ad_load_failed_internal"
+            else -> "ad_load_failed_other"
+        }
+        logSimpleEvent(
+            context,
+            eventName,
+            buildAdParams(adUnitId, adFormat, key, errorCode = errorCode, errorMessage = errorMessage)
+        )
+    }
+
+    fun logAdShowCalled(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_show_called", buildAdParams(adUnitId, adFormat, key))
+    }
+
+    fun logAdShowSuccess(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_show_success", buildAdParams(adUnitId, adFormat, key))
+    }
+
+    fun logAdShowFailed(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        errorCode: Int? = null,
+        errorMessage: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(
+            context,
+            "ad_show_failed",
+            buildAdParams(adUnitId, adFormat, key, errorCode = errorCode, errorMessage = errorMessage)
+        )
+    }
+
+    fun logAdClickedCustom(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_clicked_custom", buildAdParams(adUnitId, adFormat, key))
+        logClickAdsEvent(context, adUnitId ?: "unknown")
+    }
+
+    fun logAdDismissed(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_dismissed", buildAdParams(adUnitId, adFormat, key))
+    }
+
+    fun logAdRewardEarned(
+        context: Context,
+        adUnitId: String? = null,
+        rewardType: String? = null,
+        rewardAmount: Int? = null,
+        key: String? = null
+    ) {
+        val params = buildAdParams(adUnitId, "reward", key).apply {
+            rewardType?.let { putString("reward_type", it) }
+            rewardAmount?.let { putInt("reward_amount", it) }
+        }
+        logSimpleEvent(context, "ad_reward_earned", params)
+    }
 
     fun logPaidAdImpression(
         context: Context,
@@ -39,51 +250,49 @@ object OzEventLogger {
         adUnitId: String,
         network: String
     ) {
-        val firebaseAnalytics = FirebaseAnalytics.getInstance(context)
+        try {
+            val firebaseAnalytics = FirebaseAnalytics.getInstance(context)
 
-        // NOTE (currency): adValue.currencyCode is returned according to the AdMob account's 
-        // REPORTING CURRENCY (e.g., USD), NOT the user's local geo currency. Do not assume
-        // a user in VN will report VND here.
-        val revenueInCurrency = revenueMicros / 1_000_000.0
+            val revenueInCurrency = revenueMicros / 1_000_000.0
 
-        // 1. Debug Log to Console
-        Log.d(
-            TAG,
-            "Paid event of value %.6f %s (precision %s) for ad unit %s from network %s".format(
-                revenueInCurrency,
-                currencyCode,
-                precision,
-                adUnitId,
-                network
+            OzLog.d(
+                TAG,
+                "Paid event of value %.6f %s (precision %s) for ad unit %s from network %s".format(
+                    revenueInCurrency,
+                    currencyCode,
+                    precision,
+                    adUnitId,
+                    network
+                )
             )
-        )
 
-        // 2. Log Standard Revenue Event (ad_impression)
-        // NOTE (event name): "app_event_impression" is a custom event — it is not automatically
-        // used by Firebase/Google Ads for ROAS calculation like the standard "ad_impression" event.
-        // Confirm with the analytics team before changing this event name to avoid breaking dashboards
-        // or causing double-counting if AdMob-Firebase linking is already active.
-        val revenueParams = Bundle().apply {
-            putDouble(FirebaseAnalytics.Param.VALUE, revenueInCurrency)
-            putString(FirebaseAnalytics.Param.CURRENCY, currencyCode)
-            putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId)
-            putString(FirebaseAnalytics.Param.AD_SOURCE, network)
-            putString(FirebaseAnalytics.Param.AD_PLATFORM, "AdMob")
-            putInt("precision", precision) // Custom param for precision
+            val revenueParams = Bundle().apply {
+                putDouble(FirebaseAnalytics.Param.VALUE, revenueInCurrency)
+                putString(FirebaseAnalytics.Param.CURRENCY, currencyCode)
+                putString(FirebaseAnalytics.Param.AD_UNIT_NAME, adUnitId)
+                putString(FirebaseAnalytics.Param.AD_SOURCE, network)
+                putString(FirebaseAnalytics.Param.AD_PLATFORM, "AdMob")
+                putInt("precision", precision)
+            }
+            firebaseAnalytics.logEvent("app_event_impression", revenueParams)
+            firebaseAnalytics.logEvent("ad_revenue_paid", revenueParams)
+        } catch (e: Exception) {
+            OzLog.e(TAG, "Error logging paid ad impression event", e)
         }
-        firebaseAnalytics.logEvent("app_event_impression", revenueParams)
     }
 
     fun logClickAdsEvent(context: Context, adUnitId: String) {
-        Log.d(TAG, "User click ad for ad unit $adUnitId.")
+        try {
+            OzLog.d(TAG, "User click ad for ad unit $adUnitId.")
 
-        val params = Bundle().apply {
-            putString("ad_unit_id", adUnitId)
+            val params = Bundle().apply {
+                putString("ad_unit_id", adUnitId)
+            }
+
+            FirebaseAnalytics.getInstance(context).logEvent("ad_click", params)
+        } catch (e: Exception) {
+            OzLog.e(TAG, "Error logging click ad event", e)
         }
-
-        // Using "ad_click" which is a standard concept, though often auto-collected.
-        // Logging manually ensures it appears if auto-collection is off.
-        FirebaseAnalytics.getInstance(context).logEvent("ad_click", params)
     }
 
     fun logPaidAdImpressionNextGen(

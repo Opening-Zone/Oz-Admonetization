@@ -3,7 +3,7 @@ package com.oz.android.oz_ads.ads_inline.admob
 import com.oz.android.ads_core.admobs.banner.AdmobBanner
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.google.android.gms.ads.AdSize
 import com.oz.android.utils.listener.OzAdListener
 import com.oz.android.utils.config.AdsCoreType
@@ -38,7 +38,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
     fun setAdUnitId(key: String, adUnitId: String) {
         setPreloadKey(key)
         this.currentAdUnitId = adUnitId
-        Log.d(TAG, "Ad unit ID set for key: $key -> $adUnitId")
+        OzLog.d(TAG, "Ad unit ID set for key: $key -> $adUnitId")
     }
 
     /**
@@ -47,7 +47,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      */
     fun setCollapsible(position: String) {
         this.collapsiblePosition = position
-        Log.d(TAG, "Collapsible banner enabled at: $position")
+        OzLog.d(TAG, "Collapsible banner enabled at: $position")
     }
 
     /**
@@ -55,7 +55,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      */
     fun setCollapsibleTop() {
         this.collapsiblePosition = "top"
-        Log.d(TAG, "Collapsible banner enabled at top")
+        OzLog.d(TAG, "Collapsible banner enabled at top")
     }
 
     /**
@@ -63,7 +63,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      */
     fun setCollapsibleBottom() {
         this.collapsiblePosition = "bottom"
-        Log.d(TAG, "Collapsible banner enabled at bottom")
+        OzLog.d(TAG, "Collapsible banner enabled at bottom")
     }
 
     /**
@@ -71,13 +71,13 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      */
     fun disableCollapsible() {
         this.collapsiblePosition = null
-        Log.d(TAG, "Collapsible banner disabled")
+        OzLog.d(TAG, "Collapsible banner disabled")
     }
 
     override fun createAd(key: String): AdmobBanner? {
         val adUnitId = currentAdUnitId
         if (adUnitId.isBlank()) {
-            Log.e(TAG, "Ad unit ID not set for key: $key")
+            OzLog.e(TAG, "Ad unit ID not set for key: $key")
             return null
         }
 
@@ -109,7 +109,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
 
     override fun onLoadAd(key: String, ad: AdmobBanner) {
-        Log.d(TAG, "Loading banner ad for key: $key")
+        OzLog.d(TAG, "Loading banner ad for key: $key")
         // Pass this ViewGroup as container so AdmobBanner can calculate size from actual layout dimensions
         ad.load(this)
     }
@@ -131,14 +131,14 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
      */
     private fun setShimmerSizeInternal() {
         if (width == 0) {
-            Log.w(TAG, "Layout not measured yet, skipping shimmer size")
+            OzLog.w(TAG, "Layout not measured yet, skipping shimmer size")
             return
         }
 
         val density = context.resources.displayMetrics.density
         val widthDp = (width / density).toInt()
 
-        Log.d(TAG, "Setting shimmer size from container: ${width}px (${widthDp}dp)")
+        OzLog.d(TAG, "Setting shimmer size from container: ${width}px (${widthDp}dp)")
 
         val isNextGen = OzAdsManager.getInstance().config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN
 
@@ -169,14 +169,14 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
                 layout.layoutParams.height = heightPx
                 layout.requestLayout()
             }
-            Log.d(TAG, "Shimmer size set to: width=${width}px, height=${heightPx}px (AdSize: ${adSize.width}dp x ${adSize.height}dp)")
+            OzLog.d(TAG, "Shimmer size set to: width=${width}px, height=${heightPx}px (AdSize: ${adSize.width}dp x ${adSize.height}dp)")
         } else {
-            Log.e(TAG, "Failed to calculate valid shimmer height")
+            OzLog.e(TAG, "Failed to calculate valid shimmer height")
         }
     }
 
     override fun onShowAds(key: String, ad: AdmobBanner) {
-        Log.d(TAG, "Showing banner ad for key: $key")
+        OzLog.d(TAG, "Showing banner ad for key: $key")
         currentBannerAd = ad
         // Show banner in this ViewGroup
         ad.show(this)
@@ -187,18 +187,18 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
     override fun hideAds() {
         // Remove all child views to hide the ad
         removeAllViews()
-        Log.d(TAG, "Banner ads hidden")
+        OzLog.d(TAG, "Banner ads hidden")
     }
 
     override fun destroyAd(ad: AdmobBanner) {
-        Log.d(TAG, "Destroying banner ad")
+        OzLog.d(TAG, "Destroying banner ad")
         // Detach from parent first to avoid "WebView.destroy() called while WebView is still attached"
         ad.detachFromParent()
         ad.destroy()
     }
 
     override fun onPauseAd() {
-        Log.d(TAG, "Pausing all banner ads")
+        OzLog.d(TAG, "Pausing all banner ads")
         currentBannerAd?.pause()
         if (OzAdsManager.getInstance().config.offAdsOnPause) {
             visibility = INVISIBLE
@@ -206,7 +206,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
     }
 
     override fun onResumeAd() {
-        Log.d(TAG, "Resuming all banner ads")
+        OzLog.d(TAG, "Resuming all banner ads")
         currentBannerAd?.resume()
         if (isAdEnable()) {
             visibility = VISIBLE

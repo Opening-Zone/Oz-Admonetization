@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -62,7 +62,7 @@ class AdmobNextNativeAdvanced(
 
     override fun load() {
         if (nextGenNativeAd != null) {
-            Log.d(TAG, "Ad already loaded (Next-Gen)")
+            OzLog.d(TAG, "Ad already loaded (Next-Gen)")
             listener?.onAdLoaded(this)
             return
         }
@@ -107,8 +107,9 @@ class AdmobNextNativeAdvanced(
                 nextGenNativeAd?.destroy()
                 nextGenNativeAd = nativeAd
 
-                Log.d(TAG, "Native ad loaded successfully (Next-Gen)")
+                OzLog.d(TAG, "Native ad loaded successfully (Next-Gen)")
                 setupNextGenNativeEventCallback(nativeAd)
+                OzEventLogger.logAdLoadSuccess(context, adUnitId, "native_nextgen")
 
                 // Listener callbacks: called on GMA BG thread — callers decide their own thread.
                 listener?.onAdLoaded(this@AdmobNextNativeAdvanced)
@@ -127,29 +128,32 @@ class AdmobNextNativeAdvanced(
 
             override fun onAdFailedToLoad(error: LoadAdError) {
                 // ── Runs on GMA background thread ──
-                Log.e(TAG, "Native ad failed to load: ${error.message} (Next-Gen)")
+                OzLog.e(TAG, "Native ad failed to load: ${error.message} (Next-Gen)")
 
                 // State cleanup: no UI, stays on BG.
                 nextGenNativeAd = null
                 clearPendingState()
+
+                OzEventLogger.logAdLoadFailed(context, adUnitId, "native_nextgen", error.code.ordinal, error.message)
 
                 // Listener callback: called on GMA BG thread — caller decides thread.
                 listener?.onAdFailedToLoad(error.toOzError())
             }
         }
 
+        OzEventLogger.logAdRequest(context, adUnitId, "native_nextgen")
         NativeAdLoader.load(adRequest, adCallback)
     }
 
     override fun show() {
-        Log.w(
+        OzLog.w(
             TAG,
             "show() called without container and NativeAdView. Use show(container: ViewGroup, nativeAdView: View) for native ads"
         )
     }
 
     override fun loadThenShow() {
-        Log.w(
+        OzLog.w(
             TAG,
             "loadThenShow() called without container and NativeAdView. Use loadThenShow(container: ViewGroup, nativeAdView: View) for native ads"
         )
@@ -163,10 +167,11 @@ class AdmobNextNativeAdvanced(
         val showRunnable = Runnable {
             val currentAd = nextGenNativeAd
             if (currentAd == null) {
-                Log.w(TAG, "NativeAd is null (Next-Gen). Call load() first")
+                OzLog.w(TAG, "NativeAd is null (Next-Gen). Call load() first")
                 pendingContainer = container
                 pendingNativeAdView = nativeAdView
                 pendingPopulateCallback = populateCallback
+                OzEventLogger.logAdSkip(context, adUnitId, "native_nextgen", "ad_null")
                 return@Runnable
             }
 
@@ -188,7 +193,8 @@ class AdmobNextNativeAdvanced(
 
             container.removeAllViews()
             container.addView(nextGenAdView)
-            Log.d(TAG, "Native ad displayed in container (Next-Gen)")
+            OzEventLogger.logAdShowSuccess(context, adUnitId, "native_nextgen")
+            OzLog.d(TAG, "Native ad displayed in container (Next-Gen)")
         }
 
         // Self-dispatches to main — safe to call from any thread.
@@ -298,14 +304,17 @@ class AdmobNextNativeAdvanced(
         ad.adEventCallback = object : NativeAdEventCallback {
             // All callbacks fire on GMA BG thread — callers decide their own threading.
             override fun onAdShowedFullScreenContent() {
+                OzEventLogger.logAdShowSuccess(context, adUnitId, "native_nextgen")
                 listener?.onAdShowedFullScreenContent()
             }
 
             override fun onAdDismissedFullScreenContent() {
+                OzEventLogger.logAdDismissed(context, adUnitId, "native_nextgen")
                 listener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
+                OzEventLogger.logAdShowFailed(context, adUnitId, "native_nextgen", error.code.ordinal, error.message)
                 listener?.onAdFailedToShowFullScreenContent(error.toOzError())
             }
 
@@ -314,6 +323,7 @@ class AdmobNextNativeAdvanced(
             }
 
             override fun onAdClicked() {
+                OzEventLogger.logAdClickedCustom(context, adUnitId, "native_nextgen")
                 listener?.onAdClicked()
             }
 
@@ -345,7 +355,7 @@ class AdmobNextNativeAdvanced(
         nextGenNativeAd?.destroy()
         nextGenNativeAd = null
         clearPendingState()
-        Log.d(TAG, "Native ad destroyed")
+        OzLog.d(TAG, "Native ad destroyed")
     }
 
     private fun clearPendingState() {
@@ -367,7 +377,7 @@ class AdmobNextNativeAdvanced(
                 nextGenMediaView.id = R.id.ad_media
                 nextGenMediaView.layoutParams = layoutParams
                 parent.addView(nextGenMediaView, index)
-                Log.d(TAG, "Successfully swapped GMS MediaView with Next-Gen MediaView in layout")
+                OzLog.d(TAG, "Successfully swapped GMS MediaView with Next-Gen MediaView in layout")
             }
         }
     }

@@ -6,7 +6,7 @@ import android.os.Looper
 import android.app.Dialog
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -83,7 +83,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
     private fun updateLastClosedTimeGlobal() {
         val now = System.currentTimeMillis()
         globalLastAdClosedTimes[getAdCategory()] = now
-        Log.d(TAG, "Updated global cooldown for [${getAdCategory()}]: $now")
+        OzLog.d(TAG, "Updated global cooldown for [${getAdCategory()}]: $now")
     }
 
     private fun setupLoadingIndicator() {
@@ -96,7 +96,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
                 loadingIndicator?.visibility = GONE
                 addView(loadingIndicator)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to inflate loading indicator layout: ${e.message}")
+                OzLog.e(TAG, "Failed to inflate loading indicator layout: ${e.message}")
             }
         }
     }
@@ -107,11 +107,11 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
      */
     fun setTimeGap(timeMillis: Long) {
         if (timeMillis < 0) {
-            Log.w(TAG, "Time gap cannot be negative. Ignoring.")
+            OzLog.w(TAG, "Time gap cannot be negative. Ignoring.")
             return
         }
         timeGap = timeMillis
-        Log.d(TAG, "Time gap set to: $timeMillis ms for instance of ${getAdCategory()}")
+        OzLog.d(TAG, "Time gap set to: $timeMillis ms for instance of ${getAdCategory()}")
     }
 
     /**
@@ -147,7 +147,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
      */
     override fun showAds(key: String) {
         if (!OzAdsManager.getInstance().canShowFullScreenAd()) {
-            Log.d(TAG, "Skipping showAds for key: $key. Another fullscreen ad is already showing.")
+            OzLog.d(TAG, "Skipping showAds for key: $key. Another fullscreen ad is already showing.")
             onAdShowBlocked(key, "Another fullscreen ad is already showing.")
             return
         }
@@ -155,7 +155,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
         if (!isTimeGapSatisfied()) {
             val remaining = getRemainingCooldownTime()
             val category = getAdCategory()
-            Log.d(TAG, "Skipping showAds ($category) for key: $key. Cooldown active. Remaining: ${remaining}ms")
+            OzLog.d(TAG, "Skipping showAds ($category) for key: $key. Cooldown active. Remaining: ${remaining}ms")
 
             onAdShowBlocked(key, "Time gap not satisfied. Wait ${remaining}ms")
             return
@@ -170,11 +170,11 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
         super.onAdDismissed(key)
         updateLastClosedTimeGlobal()
         OzAdsManager.getInstance().onAdsFullScreenDismissed()
-        Log.d(TAG, "Ad dismissed for key: $key. Global timer updated for ${getAdCategory()}")
+        OzLog.d(TAG, "Ad dismissed for key: $key. Global timer updated for ${getAdCategory()}")
     }
 
     override fun hideAds() {
-        Log.d(TAG, "hideAds called - no-op for Overlay ads")
+        OzLog.d(TAG, "hideAds called - no-op for Overlay ads")
     }
 
     /**
@@ -202,7 +202,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
         } else {
             loadingIndicator?.visibility = VISIBLE
         }
-        Log.d(TAG, "Loading indicator shown")
+        OzLog.d(TAG, "Loading indicator shown")
     }
 
     /**
@@ -213,7 +213,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
             loadingDialog?.dismiss()
             loadingDialog = null
             loadingIndicator?.visibility = GONE
-            Log.d(TAG, "Loading indicator hidden")
+            OzLog.d(TAG, "Loading indicator hidden")
         }
         if (Looper.myLooper() == Looper.getMainLooper()) {
             action.run()
@@ -246,7 +246,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
             dialog.show()
             loadingDialog = dialog
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to show loading dialog: ${e.message}")
+            OzLog.e(TAG, "Failed to show loading dialog: ${e.message}")
         }
     }
 

@@ -2,7 +2,7 @@ package com.oz.android.ads_core.admobs.reward
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -30,7 +30,7 @@ class AdmobStandardReward(
 
     override fun load() {
         if (rewardedAd != null) {
-            Log.d(TAG, "Ad already loaded")
+            OzLog.d(TAG, "Ad already loaded")
             return
         }
 
@@ -40,7 +40,7 @@ class AdmobStandardReward(
             AdRequest.Builder().build(),
             object : RewardedAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedAd) {
-                    Log.d(TAG, "Rewarded ad loaded successfully")
+                    OzLog.d(TAG, "Rewarded ad loaded successfully")
                     rewardedAd = ad
                     
                     rewardedAd?.onPaidEventListener = getOnPaidListener(rewardedAd!!.responseInfo)
@@ -50,7 +50,7 @@ class AdmobStandardReward(
                 }
 
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    Log.e(TAG, "Rewarded ad failed to load: ${adError.message}")
+                    OzLog.e(TAG, "Rewarded ad failed to load: ${adError.message}")
                     rewardedAd = null
                     
                     listener?.onAdFailedToLoad(adError.toOzError())
@@ -60,7 +60,7 @@ class AdmobStandardReward(
     }
 
     override fun show() {
-        Log.w(
+        OzLog.w(
             TAG,
             "show() called without activity and callback. Use show(activity: Activity, callback: OnUserEarnedRewardListener) for reward ads"
         )
@@ -69,16 +69,16 @@ class AdmobStandardReward(
     override fun show(activity: Activity, rewardCallback: OnUserEarnedRewardListener) {
         val currentAd = rewardedAd
         if (currentAd == null) {
-            Log.w(TAG, "RewardedAd is null. Call load() first")
+            OzLog.w(TAG, "RewardedAd is null. Call load() first")
             return
         }
 
         currentAd.show(activity, rewardCallback)
-        Log.d(TAG, "Rewarded ad displayed")
+        OzLog.d(TAG, "Rewarded ad displayed")
     }
 
     override fun loadThenShow() {
-        Log.w(
+        OzLog.w(
             TAG,
             "loadThenShow() called without activity and callback. Use loadThenShow(activity: Activity, callback: OnUserEarnedRewardListener) for reward ads"
         )
@@ -91,29 +91,29 @@ class AdmobStandardReward(
     private fun setupFullScreenContentCallback(ad: RewardedAd) {
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
-                Log.d(TAG, "Ad was dismissed")
+                OzLog.d(TAG, "Ad was dismissed")
                 rewardedAd = null
                 listener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                Log.e(TAG, "Ad failed to show: ${adError.message}")
+                OzLog.e(TAG, "Ad failed to show: ${adError.message}")
                 rewardedAd = null
                 listener?.onAdFailedToShowFullScreenContent(adError.toOzError())
             }
 
             override fun onAdShowedFullScreenContent() {
-                Log.d(TAG, "Ad showed fullscreen content")
+                OzLog.d(TAG, "Ad showed fullscreen content")
                 listener?.onAdShowedFullScreenContent()
             }
 
             override fun onAdImpression() {
-                Log.d(TAG, "Ad recorded an impression")
+                OzLog.d(TAG, "Ad recorded an impression")
                 listener?.onAdImpression()
             }
 
             override fun onAdClicked() {
-                Log.d(TAG, "Ad was clicked")
+                OzLog.d(TAG, "Ad was clicked")
                 listener?.onAdClicked()
             }
         }

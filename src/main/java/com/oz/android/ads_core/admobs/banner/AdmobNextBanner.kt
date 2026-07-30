@@ -5,7 +5,7 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.ViewGroup
 import androidx.window.layout.WindowMetricsCalculator
 import com.google.android.libraries.ads.mobile.sdk.banner.AdView
@@ -50,7 +50,7 @@ class AdmobNextBanner(
 
     override fun load(container: ViewGroup?) {
         if (adView != null) {
-            Log.d(TAG, "Ad already loaded")
+            OzLog.d(TAG, "Ad already loaded")
             return
         }
 
@@ -73,7 +73,7 @@ class AdmobNextBanner(
         adView = null
 
         val widthDp = calculateAdSizeDp()
-        Log.d(TAG, "Creating Next-Gen AdView with width: ${widthDp}dp")
+        OzLog.d(TAG, "Creating Next-Gen AdView with width: ${widthDp}dp")
 
         // Use standard orientation anchored adaptive size for ALL banners (including collapsible — Google only
         // requires anchored adaptive; large is optional). This formula must match the shimmer height
@@ -89,7 +89,7 @@ class AdmobNextBanner(
             val extras = Bundle()
             extras.putString("collapsible", collapsiblePosition)
             builder.setGoogleExtrasBundle(extras)
-            Log.d(TAG, "Collapsible banner request built with position: $collapsiblePosition")
+            OzLog.d(TAG, "Collapsible banner request built with position: $collapsiblePosition")
         }
         val adRequest = builder.build()
 
@@ -99,7 +99,8 @@ class AdmobNextBanner(
                 override fun onAdLoaded(ad: BannerAd) {
                     // ── Runs on GMA background thread ──
                     // State update: no UI, safe on BG.
-                    Log.d(TAG, "Banner ad loaded successfully (Next-Gen)")
+                    OzLog.d(TAG, "Banner ad loaded successfully (Next-Gen)")
+                    OzEventLogger.logAdLoadSuccess(context, adUnitId, "banner_nextgen")
 
                     // Event callbacks: callers decide their own threading.
                     ad.adEventCallback = object : BannerAdEventCallback {
@@ -108,18 +109,22 @@ class AdmobNextBanner(
                         }
 
                         override fun onAdClicked() {
+                            OzEventLogger.logAdClickedCustom(context, adUnitId, "banner_nextgen")
                             listener?.onAdClicked()
                         }
 
                         override fun onAdShowedFullScreenContent() {
+                            OzEventLogger.logAdShowSuccess(context, adUnitId, "banner_nextgen")
                             listener?.onAdShowedFullScreenContent()
                         }
 
                         override fun onAdDismissedFullScreenContent() {
+                            OzEventLogger.logAdDismissed(context, adUnitId, "banner_nextgen")
                             listener?.onAdDismissedFullScreenContent()
                         }
 
                         override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
+                            OzEventLogger.logAdShowFailed(context, adUnitId, "banner_nextgen", error.code.ordinal, error.message)
                             listener?.onAdFailedToShowFullScreenContent(error.toOzError())
                         }
 
@@ -136,11 +141,11 @@ class AdmobNextBanner(
 
                     ad.bannerAdRefreshCallback = object : BannerAdRefreshCallback {
                         override fun onAdRefreshed() {
-                            Log.d(TAG, "Next-Gen Banner ad refreshed")
+                            OzLog.d(TAG, "Next-Gen Banner ad refreshed")
                         }
 
                         override fun onAdFailedToRefresh(error: LoadAdError) {
-                            Log.e(TAG, "Next-Gen Banner ad failed to refresh: ${error.message}")
+                            OzLog.e(TAG, "Next-Gen Banner ad failed to refresh: ${error.message}")
                         }
                     }
 
@@ -158,14 +163,17 @@ class AdmobNextBanner(
                     // ── Runs on GMA background thread ──
                     // Null out adView so subsequent load() calls can create a fresh one (retry support).
                     adView = null
-                    Log.e(TAG, "Banner ad failed to load: ${error.message} (Next-Gen)")
+                    OzLog.e(TAG, "Banner ad failed to load: ${error.message} (Next-Gen)")
                     pendingContainer = null
+
+                    OzEventLogger.logAdLoadFailed(context, adUnitId, "banner_nextgen", error.code.ordinal, error.message)
 
                     // Listener callback: called on GMA BG thread — caller decides thread.
                     listener?.onAdFailedToLoad(error.toOzError())
                 }
             }
         )
+        OzEventLogger.logAdRequest(context, adUnitId, "banner_nextgen")
     }
 
     override fun show() {
@@ -176,7 +184,7 @@ class AdmobNextBanner(
         val showRunnable = Runnable {
             val currentAdView = adView
             if (currentAdView == null) {
-                Log.w(TAG, "AdView not ready. It will be shown automatically when loaded")
+                OzLog.w(TAG, "AdView not ready. It will be shown automatically when loaded")
                 pendingContainer = container
                 return@Runnable
             }
@@ -188,7 +196,8 @@ class AdmobNextBanner(
 
             container.removeAllViews()
             container.addView(currentAdView)
-            Log.d(TAG, "Banner ad displayed in container")
+            OzEventLogger.logAdShowSuccess(context, adUnitId, "banner_nextgen")
+            OzLog.d(TAG, "Banner ad displayed in container")
         }
 
         // Self-dispatches to main — safe to call from any thread.

@@ -1,7 +1,7 @@
 package com.oz.android.ads_core.admobs.banner
 
 import android.content.Context
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.ViewGroup
 import com.google.android.gms.ads.AdSize
 import com.oz.android.OzAdsManager
@@ -25,7 +25,7 @@ abstract class AdmobBanner(
 
     fun setCollapsible(position: String?) {
         if (position != null && position != "top" && position != "bottom") {
-            Log.w("AdmobBanner", "Invalid collapsible position: $position. Use 'top' or 'bottom'")
+            OzLog.w("AdmobBanner", "Invalid collapsible position: $position. Use 'top' or 'bottom'")
             return
         }
         collapsiblePosition = position

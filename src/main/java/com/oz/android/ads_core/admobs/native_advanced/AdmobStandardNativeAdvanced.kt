@@ -3,7 +3,7 @@ package com.oz.android.ads_core.admobs.native_advanced
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -18,6 +18,7 @@ import com.oz.android.ads_core.admobs.AdmobBase
 import com.oz.android.ads_core.admobs.toOzError
 import com.oz.android.ads_core.R
 import com.oz.android.utils.listener.OzAdListener
+import com.oz.android.utils.event.OzEventLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -49,7 +50,7 @@ class AdmobStandardNativeAdvanced(
 
     override fun load() {
         if (currentNativeAd != null) {
-            Log.d(TAG, "Ad already loaded")
+            OzLog.d(TAG, "Ad already loaded")
             listener?.onAdLoaded(this)
             return
         }
@@ -75,7 +76,7 @@ class AdmobStandardNativeAdvanced(
                 val forNativeAdMethod = builder.javaClass.getMethod("forNativeAd", listenerClass)
                 forNativeAdMethod.invoke(builder, proxyListener)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to register GMS OnNativeAdLoadedListener reflectively", e)
+                OzLog.e(TAG, "Failed to register GMS OnNativeAdLoadedListener reflectively", e)
             }
 
             var adOptions: Any? = null
@@ -96,7 +97,7 @@ class AdmobStandardNativeAdvanced(
                 
                 adOptions = adOptionsBuilderClass.getMethod("build").invoke(adOptionsBuilder)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to build NativeAdOptions reflectively", e)
+                OzLog.e(TAG, "Failed to build NativeAdOptions reflectively", e)
             }
 
             if (adOptions != null) {
@@ -104,7 +105,7 @@ class AdmobStandardNativeAdvanced(
                     val withNativeAdOptionsMethod = builder.javaClass.getMethod("withNativeAdOptions", Class.forName("com.google.android.gms.ads.nativead.NativeAdOptions"))
                     withNativeAdOptionsMethod.invoke(builder, adOptions)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to call withNativeAdOptions reflectively", e)
+                    OzLog.e(TAG, "Failed to call withNativeAdOptions reflectively", e)
                 }
             }
 
@@ -114,21 +115,23 @@ class AdmobStandardNativeAdvanced(
                         override fun onAdFailedToLoad(loadAdError: LoadAdError) {
                             val error =
                                 "domain: ${loadAdError.domain}, code: ${loadAdError.code}, message: ${loadAdError.message}"
-                            Log.e(TAG, "Native ad failed to load: $error")
+                            OzLog.e(TAG, "Native ad failed to load: $error")
                             currentNativeAd = null
                             pendingContainer = null
                             pendingNativeAdView = null
 
+                            OzEventLogger.logAdLoadFailed(context, adUnitId, "native", loadAdError.code, loadAdError.message)
                             listener?.onAdFailedToLoad(loadAdError.toOzError())
                         }
 
                         override fun onAdClicked() {
-                            Log.d(TAG, "Native ad was clicked")
+                            OzLog.d(TAG, "Native ad was clicked")
+                            OzEventLogger.logAdClickedCustom(context, adUnitId, "native")
                             listener?.onAdClicked()
                         }
 
                         override fun onAdImpression() {
-                            Log.d(TAG, "Native ad recorded an impression")
+                            OzLog.d(TAG, "Native ad recorded an impression")
                             listener?.onAdImpression()
                         }
                     }
@@ -136,6 +139,7 @@ class AdmobStandardNativeAdvanced(
                 .build()
 
             withContext(Dispatchers.Main) {
+                OzEventLogger.logAdRequest(context, adUnitId, "native")
                 adLoader.loadAd(AdRequest.Builder().build())
             }
         }
@@ -160,10 +164,11 @@ class AdmobStandardNativeAdvanced(
             nativeAd.javaClass.getMethod("setOnPaidEventListener", Class.forName("com.google.android.gms.ads.OnPaidEventListener"))
                 .invoke(nativeAd, paidListener)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS PaidEventListener reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS PaidEventListener reflectively", e)
         }
 
-        Log.d(TAG, "Native ad loaded successfully")
+        OzLog.d(TAG, "Native ad loaded successfully")
+        OzEventLogger.logAdLoadSuccess(context, adUnitId, "native")
         listener?.onAdLoaded(this@AdmobStandardNativeAdvanced)
         onAdLoadedCallback?.invoke(nativeAd)
 
@@ -177,14 +182,14 @@ class AdmobStandardNativeAdvanced(
     }
 
     override fun show() {
-        Log.w(
+        OzLog.w(
             TAG,
             "show() called without container and NativeAdView. Use show(container: ViewGroup, nativeAdView: View) for native ads"
         )
     }
 
     override fun loadThenShow() {
-        Log.w(
+        OzLog.w(
             TAG,
             "loadThenShow() called without container and NativeAdView. Use loadThenShow(container: ViewGroup, nativeAdView: View) for native ads"
         )
@@ -197,9 +202,10 @@ class AdmobStandardNativeAdvanced(
     ) {
         val currentAd = currentNativeAd
         if (currentAd == null) {
-            Log.w(TAG, "NativeAd is null. Call load() first")
+            OzLog.w(TAG, "NativeAd is null. Call load() first")
             pendingContainer = container
             pendingNativeAdView = nativeAdView
+            OzEventLogger.logAdSkip(context, adUnitId, "native", "ad_null")
             return
         }
 
@@ -207,7 +213,7 @@ class AdmobStandardNativeAdvanced(
             val nativeAdViewClass = Class.forName("com.google.android.gms.ads.nativead.NativeAdView")
             nativeAdViewClass.getDeclaredConstructor(Context::class.java).newInstance(context) as ViewGroup
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to construct standard NativeAdView dynamically", e)
+            OzLog.e(TAG, "Failed to construct standard NativeAdView dynamically", e)
             null
         }
 
@@ -241,7 +247,8 @@ class AdmobStandardNativeAdvanced(
             }
             container.addView(nativeAdView)
         }
-        Log.d(TAG, "Native ad displayed in container")
+        OzEventLogger.logAdShowSuccess(context, adUnitId, "native")
+        OzLog.d(TAG, "Native ad displayed in container")
     }
 
     override fun loadThenShow(
@@ -274,7 +281,7 @@ class AdmobStandardNativeAdvanced(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS MediaContent reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS MediaContent reflectively", e)
         }
 
         try {
@@ -285,7 +292,7 @@ class AdmobStandardNativeAdvanced(
                 (headlineView as? TextView)?.text = headline
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS Headline reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS Headline reflectively", e)
         }
 
         try {
@@ -301,7 +308,7 @@ class AdmobStandardNativeAdvanced(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS Body reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS Body reflectively", e)
         }
 
         try {
@@ -317,7 +324,7 @@ class AdmobStandardNativeAdvanced(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS CallToAction reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS CallToAction reflectively", e)
         }
 
         try {
@@ -335,7 +342,7 @@ class AdmobStandardNativeAdvanced(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS Icon reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS Icon reflectively", e)
         }
 
         try {
@@ -351,7 +358,7 @@ class AdmobStandardNativeAdvanced(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS Price reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS Price reflectively", e)
         }
 
         try {
@@ -367,7 +374,7 @@ class AdmobStandardNativeAdvanced(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS Store reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS Store reflectively", e)
         }
 
         try {
@@ -383,7 +390,7 @@ class AdmobStandardNativeAdvanced(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS StarRating reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS StarRating reflectively", e)
         }
 
         try {
@@ -399,14 +406,14 @@ class AdmobStandardNativeAdvanced(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set GMS Advertiser reflectively", e)
+            OzLog.e(TAG, "Failed to set GMS Advertiser reflectively", e)
         }
 
         try {
             val setNativeAdMethod = nativeAdView.javaClass.getMethod("setNativeAd", Class.forName("com.google.android.gms.ads.nativead.NativeAd"))
             setNativeAdMethod.invoke(nativeAdView, nativeAd)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to call GMS setNativeAd reflectively", e)
+            OzLog.e(TAG, "Failed to call GMS setNativeAd reflectively", e)
         }
     }
 
@@ -439,7 +446,7 @@ class AdmobStandardNativeAdvanced(
             val setMediaViewMethod = gmsNativeAdView.javaClass.getMethod("setMediaView", Class.forName("com.google.android.gms.ads.nativead.MediaView"))
             setMediaViewMethod.invoke(gmsNativeAdView, gmsNativeAdView.findViewById(R.id.ad_media))
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to bind GMS standard views reflectively", e)
+            OzLog.e(TAG, "Failed to bind GMS standard views reflectively", e)
         }
     }
 
@@ -456,7 +463,7 @@ class AdmobStandardNativeAdvanced(
         try {
             ad.javaClass.getMethod("destroy").invoke(ad)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to destroy ad reflectively", e)
+            OzLog.e(TAG, "Failed to destroy ad reflectively", e)
         }
     }
 
@@ -465,6 +472,6 @@ class AdmobStandardNativeAdvanced(
         currentNativeAd = null
         pendingContainer = null
         pendingNativeAdView = null
-        Log.d(TAG, "Native ad destroyed")
+        OzLog.d(TAG, "Native ad destroyed")
     }
 }

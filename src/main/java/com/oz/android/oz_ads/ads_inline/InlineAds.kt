@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -107,7 +107,7 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
             }
             super.loadAd()
         } ?: run {
-            Log.w(TAG, "No key set. Init the ads with key and id first")
+            OzLog.w(TAG, "No key set. Init the ads with key and id first")
         }
     }
 
@@ -117,7 +117,7 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
      */
     fun setRefreshTime(timeInMillis: Long) {
         if (timeInMillis <= 0) {
-            Log.w(TAG, "Refresh time must be greater than 0")
+            OzLog.w(TAG, "Refresh time must be greater than 0")
             return
         }
         refreshTime = timeInMillis
@@ -172,7 +172,7 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
      * Refresh ad (reload a new ad)
      */
     fun refreshAd() {
-        Log.d(TAG, "Refreshing ad...")
+        OzLog.d(TAG, "Refreshing ad...")
         adKey?.let {
             loadThenShow()
         }

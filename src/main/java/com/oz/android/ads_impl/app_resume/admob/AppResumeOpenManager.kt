@@ -2,7 +2,7 @@ package com.oz.android.ads_impl.app_resume.admob
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.oz.android.ads_core.admobs.app_open.AdmobAppOpen
 import com.oz.android.ads_impl.app_resume.AppLifecycleAdManager
 import com.oz.android.utils.listener.OzAdError
@@ -70,7 +70,7 @@ class AppResumeOpenManager private constructor() :
      */
     fun setAdUnitId(adUnitId: String) {
         this.adUnitId = adUnitId
-        Log.d(TAG, "Ad Unit ID set: $adUnitId")
+        OzLog.d(TAG, "Ad Unit ID set: $adUnitId")
     }
 
     /**
@@ -98,7 +98,7 @@ class AppResumeOpenManager private constructor() :
      */
     override fun showAd(activity: Activity, onShowComplete: () -> Unit) {
         if (OzAdsManager.getInstance().isFullScreenAdShowing.value || OzLoadingDialog.isShowing()) {
-            Log.d(TAG, "Another fullscreen ad or loading dialog is showing. Skipping app resume ad.")
+            OzLog.d(TAG, "Another fullscreen ad or loading dialog is showing. Skipping app resume ad.")
             onShowComplete()
             return
         }
@@ -106,7 +106,7 @@ class AppResumeOpenManager private constructor() :
         if (isAdReady()) {
             openAd?.show(activity)
         } else {
-            Log.d(TAG, "Ad is not ready or expired. Calling loadThenShow to reload and show.")
+            OzLog.d(TAG, "Ad is not ready or expired. Calling loadThenShow to reload and show.")
             openAd?.loadThenShow(activity)
         }
         onShowComplete()
@@ -118,30 +118,30 @@ class AppResumeOpenManager private constructor() :
     private fun createAdListener(): OzAdListener<AdmobAppOpen> {
         return object : OzAdListener<AdmobAppOpen>() {
             override fun onAdLoaded(ad: AdmobAppOpen) {
-                Log.d(TAG, "App Open ad loaded successfully")
+                OzLog.d(TAG, "App Open ad loaded successfully")
                 onAdLoadedSuccess(ad)
                 adListener?.onAdLoaded(ad)
             }
 
             override fun onAdFailedToLoad(error: OzAdError) {
-                Log.e(TAG, "Failed to load App Open ad: ${error.message}")
+                OzLog.e(TAG, "Failed to load App Open ad: ${error.message}")
                 currentAd = null
                 adListener?.onAdFailedToLoad(error)
             }
 
             override fun onAdClicked() {
-                Log.d(TAG, "App Open ad clicked - disabling next resume ad")
+                OzLog.d(TAG, "App Open ad clicked - disabling next resume ad")
                 disableAdResumeByClickAction()
                 adListener?.onAdClicked()
             }
 
             override fun onAdDismissedFullScreenContent() {
-                Log.d(TAG, "App Open ad dismissed")
+                OzLog.d(TAG, "App Open ad dismissed")
                 adListener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
-                Log.e(TAG, "Failed to show App Open ad: ${adError.message}")
+                OzLog.e(TAG, "Failed to show App Open ad: ${adError.message}")
                 adListener?.onAdFailedToShowFullScreenContent(adError)
             }
         }
@@ -163,7 +163,7 @@ class AppResumeOpenManager private constructor() :
                 onComplete?.invoke()
             }
         } else {
-            Log.w(TAG, "Ad not ready to show manually")
+            OzLog.w(TAG, "Ad not ready to show manually")
             onComplete?.invoke()
         }
     }

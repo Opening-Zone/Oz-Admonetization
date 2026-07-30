@@ -9,21 +9,33 @@ import com.oz.android.OzAdsManager
  */
 object OzLog {
 
-    fun d(tag: String, msg: String) {
+    fun d(tag: String, msg: String, tr: Throwable? = null) {
         if (OzAdsManager.getInstance().config.isDebugMode) {
-            Log.d(tag, msg)
+            if (tr != null) {
+                Log.d(tag, msg, tr)
+            } else {
+                Log.d(tag, msg)
+            }
         }
     }
 
-    fun i(tag: String, msg: String) {
+    fun i(tag: String, msg: String, tr: Throwable? = null) {
         if (OzAdsManager.getInstance().config.isDebugMode) {
-            Log.i(tag, msg)
+            if (tr != null) {
+                Log.i(tag, msg, tr)
+            } else {
+                Log.i(tag, msg)
+            }
         }
     }
 
-    fun w(tag: String, msg: String) {
+    fun w(tag: String, msg: String, tr: Throwable? = null) {
         if (OzAdsManager.getInstance().config.isDebugMode) {
-            Log.w(tag, msg)
+            if (tr != null) {
+                Log.w(tag, msg, tr)
+            } else {
+                Log.w(tag, msg)
+            }
         }
     }
 
@@ -33,6 +45,16 @@ object OzLog {
                 Log.e(tag, msg, tr)
             } else {
                 Log.e(tag, msg)
+            }
+        }
+    }
+
+    fun v(tag: String, msg: String, tr: Throwable? = null) {
+        if (OzAdsManager.getInstance().config.isDebugMode) {
+            if (tr != null) {
+                Log.v(tag, msg, tr)
+            } else {
+                Log.v(tag, msg)
             }
         }
     }

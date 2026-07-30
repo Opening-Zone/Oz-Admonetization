@@ -57,6 +57,9 @@ class AdmobNextManager private constructor() {
             return
         }
 
+        val startTime = System.currentTimeMillis()
+        com.oz.android.utils.event.OzEventLogger.logAdsSdkInitStart(context, "AdMob_NextGen")
+
         OzLog.d(TAG, "Initializing Next-Gen Mobile Ads SDK with App ID: $appId")
 
         // Per Google's official guidance, MobileAds.initialize must run on a background thread.
@@ -66,6 +69,9 @@ class AdmobNextManager private constructor() {
                     context,
                     InitializationConfig.Builder(appId).build()
                 ) { initializationStatus ->
+                    val duration = System.currentTimeMillis() - startTime
+                    com.oz.android.utils.event.OzEventLogger.logAdsSdkInitComplete(context, duration)
+
                     // Log each adapter's status sorted by latency (slowest first) for easy diagnosis.
                     val sorted = initializationStatus.adapterStatusMap.entries
                         .sortedByDescending { it.value.latency }
@@ -82,6 +88,7 @@ class AdmobNextManager private constructor() {
                 }
             } catch (e: Exception) {
                 OzLog.e(TAG, "Failed to initialize Next-Gen Mobile Ads SDK", e)
+                com.oz.android.utils.event.OzEventLogger.logAdsSdkInitException(context, e.message)
                 onComplete()
             }
         }
