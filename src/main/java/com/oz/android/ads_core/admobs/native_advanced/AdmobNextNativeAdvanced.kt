@@ -305,13 +305,11 @@ class AdmobNextNativeAdvanced(
             }
 
             override fun onAdDismissedFullScreenContent() {
-                OzEventLogger.logAdDismissed(context, adUnitId, "native_nextgen")
                 listener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
                 val ozError = error.toOzError()
-                OzEventLogger.logAdShowFailed(context, adUnitId, "native_nextgen", ozError.code, ozError.message)
                 listener?.onAdFailedToShowFullScreenContent(ozError)
             }
 
@@ -320,7 +318,6 @@ class AdmobNextNativeAdvanced(
             }
 
             override fun onAdClicked() {
-                OzEventLogger.logAdClickedCustom(context, adUnitId, "native_nextgen")
                 listener?.onAdClicked()
             }
 

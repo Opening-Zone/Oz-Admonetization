@@ -102,6 +102,14 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
                 // Update internal state to SHOWING and stop shimmer when AdMob confirms impression
                 this@OzAdmobNativeAd.onAdShown(key)
             }
+
+            override fun onAdDismissedFullScreenContent() {
+                this@OzAdmobNativeAd.onAdDismissed(key)
+            }
+
+            override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
+                this@OzAdmobNativeAd.onAdShowFailed(key, adError.message, adError.code)
+            }
         }
 
         val mergedListener = nativeListener.merge(listener)
