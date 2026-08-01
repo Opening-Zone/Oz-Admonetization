@@ -186,8 +186,8 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
         hideLoading()
     }
 
-    override fun onAdShowFailed(key: String, message: String?) {
-        super.onAdShowFailed(key, message)
+    override fun onAdShowFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdShowFailed(key, message, errorCode)
         hideLoading()
         OzAdsManager.getInstance().onAdsFullScreenDismissed()
     }
@@ -271,8 +271,8 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
         hideLoading()
     }
 
-    override fun onAdLoadFailed(key: String, message: String?) {
-        super.onAdLoadFailed(key, message)
+    override fun onAdLoadFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdLoadFailed(key, message, errorCode)
         hideLoading()
     }
 

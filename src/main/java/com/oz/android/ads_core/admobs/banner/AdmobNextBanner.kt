@@ -100,7 +100,6 @@ class AdmobNextBanner(
                     // ── Runs on GMA background thread ──
                     // State update: no UI, safe on BG.
                     OzLog.d(TAG, "Banner ad loaded successfully (Next-Gen)")
-                    OzEventLogger.logAdLoadSuccess(context, adUnitId, "banner_nextgen")
 
                     // Event callbacks: callers decide their own threading.
                     ad.adEventCallback = object : BannerAdEventCallback {
@@ -109,7 +108,6 @@ class AdmobNextBanner(
                         }
 
                         override fun onAdClicked() {
-                            OzEventLogger.logAdClickedCustom(context, adUnitId, "banner_nextgen")
                             listener?.onAdClicked()
                         }
 
@@ -118,13 +116,11 @@ class AdmobNextBanner(
                         }
 
                         override fun onAdDismissedFullScreenContent() {
-                            OzEventLogger.logAdDismissed(context, adUnitId, "banner_nextgen")
                             listener?.onAdDismissedFullScreenContent()
                         }
 
                         override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
                             val ozError = error.toOzError()
-                            OzEventLogger.logAdShowFailed(context, adUnitId, "banner_nextgen", ozError.code, ozError.message)
                             listener?.onAdFailedToShowFullScreenContent(ozError)
                         }
 
@@ -167,13 +163,11 @@ class AdmobNextBanner(
                     pendingContainer = null
 
                     val ozError = error.toOzError()
-                    OzEventLogger.logAdLoadFailed(context, adUnitId, "banner_nextgen", ozError.code, ozError.message)
                     // Listener callback: called on GMA BG thread — caller decides thread.
                     listener?.onAdFailedToLoad(ozError)
                 }
             }
         )
-        OzEventLogger.logAdRequest(context, adUnitId, "banner_nextgen")
     }
 
     override fun show() {

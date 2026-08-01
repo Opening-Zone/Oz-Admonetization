@@ -120,13 +120,11 @@ class AdmobStandardNativeAdvanced(
                             pendingContainer = null
                             pendingNativeAdView = null
 
-                            OzEventLogger.logAdLoadFailed(context, adUnitId, "native", loadAdError.code, loadAdError.message)
                             listener?.onAdFailedToLoad(loadAdError.toOzError())
                         }
 
                         override fun onAdClicked() {
                             OzLog.d(TAG, "Native ad was clicked")
-                            OzEventLogger.logAdClickedCustom(context, adUnitId, "native")
                             listener?.onAdClicked()
                         }
 
@@ -139,7 +137,6 @@ class AdmobStandardNativeAdvanced(
                 .build()
 
             withContext(Dispatchers.Main) {
-                OzEventLogger.logAdRequest(context, adUnitId, "native")
                 adLoader.loadAd(AdRequest.Builder().build())
             }
         }
@@ -168,7 +165,6 @@ class AdmobStandardNativeAdvanced(
         }
 
         OzLog.d(TAG, "Native ad loaded successfully")
-        OzEventLogger.logAdLoadSuccess(context, adUnitId, "native")
         listener?.onAdLoaded(this@AdmobStandardNativeAdvanced)
         onAdLoadedCallback?.invoke(nativeAd)
 

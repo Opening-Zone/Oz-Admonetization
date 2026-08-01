@@ -141,8 +141,8 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
      * @param key Key of the ad that failed to load
      * @param message Failure message
      */
-    override fun onAdLoadFailed(key: String, message: String?) {
-        super.onAdLoadFailed(key, message)
+    override fun onAdLoadFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdLoadFailed(key, message, errorCode)
         stopShimmer()
 
         if (isVisible) {

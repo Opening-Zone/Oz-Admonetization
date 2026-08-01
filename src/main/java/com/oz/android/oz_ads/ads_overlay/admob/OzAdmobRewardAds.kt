@@ -32,6 +32,9 @@ open class OzAdmobRewardAds @JvmOverloads constructor(
         setTimeGap(0)
     }
 
+    override val adFormat: String = "reward"
+    override fun getAdUnitId(key: String): String? = currentAdUnitId
+
     companion object {
         private const val TAG = "OzAdmobRewardAds"
     }
@@ -64,9 +67,8 @@ open class OzAdmobRewardAds @JvmOverloads constructor(
 
     /**
      * Show the rewarded ad.
-     * Convenience method that sets activity, callback, and triggers showAds().
+     * Convenience method that sets activity and triggers showAds().
      * @param activity The activity context required to show the ad.
-     * @param rewardCallback Callback to handle when the user earns a reward.
      */
     fun show(activity: Activity, rewardCallback: OnUserEarnedRewardListener) {
         adKey?.let { key ->
@@ -78,9 +80,8 @@ open class OzAdmobRewardAds @JvmOverloads constructor(
 
     /**
      * Load and then show the rewarded ad.
-     * Convenience method that sets activity, callback, and triggers loadThenShow().
+     * Convenience method that sets activity and triggers loadThenShow().
      * @param activity The activity context required to show the ad.
-     * @param rewardCallback Callback to handle when the user earns a reward.
      * @param showOverlay Show a loading overlay while waiting for ad loads.
      */
     fun loadThenShow(activity: Activity, rewardCallback: OnUserEarnedRewardListener, showOverlay: Boolean = false) {
@@ -109,7 +110,7 @@ open class OzAdmobRewardAds @JvmOverloads constructor(
 
         if (adUnitId.isNullOrBlank()) {
             OzLog.e(TAG, "Ad unit ID is not set for key: $key")
-            onAdLoadFailed(key, "Ad unit ID not set")
+            onAdLoadFailed(key, "Ad unit ID not set", 0)
             return null
         }
 
@@ -124,7 +125,7 @@ open class OzAdmobRewardAds @JvmOverloads constructor(
             override fun onAdFailedToLoad(error: OzAdError) {
                 OzLoadingDialog.hideFullScreenLoadingDialog()
                 // Bridge to OzAds.onAdLoadFailed() - handles state management
-                this@OzAdmobRewardAds.onAdLoadFailed(key, error.message)
+                this@OzAdmobRewardAds.onAdLoadFailed(key, error.message, error.code)
             }
 
             override fun onAdShowedFullScreenContent() {
@@ -139,7 +140,7 @@ open class OzAdmobRewardAds @JvmOverloads constructor(
 
             override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
                 // Bridge to OzAds.onAdShowFailed() - handles state management
-                this@OzAdmobRewardAds.onAdShowFailed(key, adError.message)
+                this@OzAdmobRewardAds.onAdShowFailed(key, adError.message, adError.code)
             }
 
             override fun onAdClicked() {
@@ -216,15 +217,15 @@ open class OzAdmobRewardAds @JvmOverloads constructor(
     /**
      * Override onAdLoadFailed to notify error callback
      */
-    override fun onAdLoadFailed(key: String, message: String?) {
-        super.onAdLoadFailed(key, message)
+    override fun onAdLoadFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdLoadFailed(key, message, errorCode)
     }
 
     /**
      * Override onAdShowFailed to clean up activity and callback references and notify error callback
      */
-    override fun onAdShowFailed(key: String, message: String?) {
-        super.onAdShowFailed(key, message)
+    override fun onAdShowFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdShowFailed(key, message, errorCode)
         currentActivity = null
         currentRewardCallback = null
         listener?.onNextAction()

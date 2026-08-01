@@ -22,6 +22,9 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : OverlayAds<AdmobAppOpen>(context, attrs, defStyleAttr) {
 
+    override val adFormat: String = "app_open"
+    override fun getAdUnitId(key: String): String? = currentAdUnitId
+
     companion object {
         private const val TAG = "OzAdmobOpenAd"
     }
@@ -32,8 +35,8 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
 
     /**
      * Set ad unit ID for a specific placement key.
-     * @param key A unique key to identify this ad placement.
-     * @param adUnitId The AdMob ad unit ID for the App Open ad.
+     * @param key A unique key to identify this ad placement (passed to parent for state management).
+     * @param adUnitId The AdMob ad unit ID for the app open ad.
      */
     fun setAdUnitId(key: String, adUnitId: String) {
         setPreloadKey(key)
@@ -52,7 +55,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
     }
 
     /**
-     * Show the App Open ad.
+     * Show the app open ad.
      * Convenience method that sets activity and triggers showAds().
      * @param activity The activity context required to show the ad.
      */
@@ -64,7 +67,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
     }
 
     /**
-     * Load and then show the App Open ad.
+     * Load and then show the app open ad.
      * Convenience method that sets activity and triggers loadThenShow().
      * @param activity The activity context required to show the ad.
      */
@@ -84,7 +87,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
 
         if (adUnitId.isNullOrBlank()) {
             OzLog.e(TAG, "Ad unit ID is not set for key: $key")
-            onAdLoadFailed(key, "Ad unit ID not set")
+            onAdLoadFailed(key, "Ad unit ID not set", 0)
             return null
         }
 
@@ -97,7 +100,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
 
             override fun onAdFailedToLoad(error: OzAdError) {
                 // Bridge to OzAds.onAdLoadFailed() - handles state management
-                this@OzAdmobOpenAd.onAdLoadFailed(key, error.message)
+                this@OzAdmobOpenAd.onAdLoadFailed(key, error.message, error.code)
             }
 
             override fun onAdShowedFullScreenContent() {
@@ -112,7 +115,7 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
 
             override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
                 // Bridge to OzAds.onAdShowFailed() - handles state management
-                this@OzAdmobOpenAd.onAdShowFailed(key, adError.message)
+                this@OzAdmobOpenAd.onAdShowFailed(key, adError.message, adError.code)
             }
 
             override fun onAdClicked() {
@@ -184,16 +187,16 @@ open class OzAdmobOpenAd @JvmOverloads constructor(
     /**
      * Override onAdLoadFailed to notify error callback
      */
-    override fun onAdLoadFailed(key: String, message: String?) {
-        super.onAdLoadFailed(key, message)
+    override fun onAdLoadFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdLoadFailed(key, message, errorCode)
         listener?.onNextAction()
     }
 
     /**
      * Override onAdShowFailed to clean up activity reference and notify error callback
      */
-    override fun onAdShowFailed(key: String, message: String?) {
-        super.onAdShowFailed(key, message)
+    override fun onAdShowFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdShowFailed(key, message, errorCode)
         currentActivity = null
         listener?.onNextAction()
         OzLog.d(TAG, "Cleaned up activity reference for key: $key after show failed")

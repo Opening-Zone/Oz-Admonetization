@@ -109,7 +109,6 @@ class AdmobNextNativeAdvanced(
 
                 OzLog.d(TAG, "Native ad loaded successfully (Next-Gen)")
                 setupNextGenNativeEventCallback(nativeAd)
-                OzEventLogger.logAdLoadSuccess(context, adUnitId, "native_nextgen")
 
                 // Listener callbacks: called on GMA BG thread — callers decide their own thread.
                 listener?.onAdLoaded(this@AdmobNextNativeAdvanced)
@@ -135,14 +134,12 @@ class AdmobNextNativeAdvanced(
                 clearPendingState()
 
                 val ozError = error.toOzError()
-                OzEventLogger.logAdLoadFailed(context, adUnitId, "native_nextgen", ozError.code, ozError.message)
 
                 // Listener callback: called on GMA BG thread — caller decides thread.
                 listener?.onAdFailedToLoad(ozError)
             }
         }
 
-        OzEventLogger.logAdRequest(context, adUnitId, "native_nextgen")
         NativeAdLoader.load(adRequest, adCallback)
     }
 

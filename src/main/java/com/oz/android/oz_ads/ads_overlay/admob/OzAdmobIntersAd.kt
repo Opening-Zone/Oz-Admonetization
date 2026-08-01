@@ -27,6 +27,9 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : OverlayAds<AdmobInterstitial>(context, attrs, defStyleAttr) {
 
+    override val adFormat: String = "interstitial"
+    override fun getAdUnitId(key: String): String? = currentAdUnitId
+
     companion object {
         private const val TAG = "OzAdmobIntersAd"
     }
@@ -114,7 +117,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
             override fun onAdFailedToLoad(error: OzAdError) {
                 OzLoadingDialog.hideFullScreenLoadingDialog()
                 // Bridge to OzAds.onAdLoadFailed() - handles state management
-                this@OzAdmobIntersAd.onAdLoadFailed(key, error.message)
+                this@OzAdmobIntersAd.onAdLoadFailed(key, error.message, error.code)
             }
 
             override fun onAdShowedFullScreenContent() {
@@ -129,7 +132,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
 
             override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
                 // Bridge to OzAds.onAdShowFailed() - handles state management
-                this@OzAdmobIntersAd.onAdShowFailed(key, adError.message)
+                this@OzAdmobIntersAd.onAdShowFailed(key, adError.message, adError.code)
             }
 
             override fun onAdClicked() {
@@ -196,12 +199,12 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
         OzLog.d(TAG, "Cleaned up activity reference for key: $key")
     }
 
-    override fun onAdLoadFailed(key: String, message: String?) {
-        super.onAdLoadFailed(key, message)
+    override fun onAdLoadFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdLoadFailed(key, message, errorCode)
     }
 
-    override fun onAdShowFailed(key: String, message: String?) {
-        super.onAdShowFailed(key, message)
+    override fun onAdShowFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdShowFailed(key, message, errorCode)
         currentActivity = null
         listener?.onNextAction()
         OzLog.d(TAG, "Cleaned up activity reference for key: $key after show failed")

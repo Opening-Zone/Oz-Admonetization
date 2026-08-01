@@ -26,6 +26,9 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
     private var collapsiblePosition: String? = null
     private var currentBannerAd: AdmobBanner? = null
 
+    override val adFormat: String = "banner"
+    override fun getAdUnitId(key: String): String = currentAdUnitId
+
     companion object {
         private const val TAG = "OzAdmobBannerAd"
     }
@@ -91,7 +94,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
 
             override fun onAdFailedToLoad(error: OzAdError) {
                 // Notify parent about the failure
-                this@OzAdmobBannerAd.onAdLoadFailed(key, error.message)
+                this@OzAdmobBannerAd.onAdLoadFailed(key, error.message, error.code)
             }
 
             override fun onAdClicked() {

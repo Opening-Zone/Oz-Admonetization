@@ -41,8 +41,6 @@ class AdmobNextReward(
             return
         }
 
-        OzEventLogger.logAdRequest(context, adUnitId, "reward_nextgen")
-
         RewardedAd.load(
             AdRequest.Builder(adUnitId).build(),
             object : AdLoadCallback<RewardedAd> {
@@ -55,8 +53,6 @@ class AdmobNextReward(
                     // setupNextGenFullScreenCallback only sets a property, safe on BG.
                     setupNextGenFullScreenCallback(ad)
 
-                    OzEventLogger.logAdLoadSuccess(context, adUnitId, "reward_nextgen")
-
                     // Listener callback: called on GMA BG thread — caller decides thread.
                     listener?.onAdLoaded(this@AdmobNextReward)
                 }
@@ -68,8 +64,6 @@ class AdmobNextReward(
                     nextGenAd = null
 
                     val ozError = error.toOzError()
-                    OzEventLogger.logAdLoadFailed(context, adUnitId, "reward_nextgen", ozError.code, ozError.message)
-
                     // Listener callback: called on GMA BG thread — caller decides thread.
                     listener?.onAdFailedToLoad(ozError)
                 }
@@ -89,11 +83,9 @@ class AdmobNextReward(
             val currentAd = nextGenAd
             if (currentAd == null) {
                 OzLog.w(TAG, "RewardedAd is null (Next-Gen). Call load() first")
-                OzEventLogger.logAdSkip(context, adUnitId, "reward_nextgen", "ad_null")
                 return@Runnable
             }
 
-            OzEventLogger.logAdShowCalled(context, adUnitId, "reward_nextgen")
             currentAd.show(activity, object : OnUserEarnedRewardListener {
                 override fun onUserEarnedReward(reward: RewardItem) {
                     val gmsRewardItem = object : com.google.android.gms.ads.rewarded.RewardItem {
@@ -133,7 +125,6 @@ class AdmobNextReward(
             override fun onAdDismissedFullScreenContent() {
                 OzLog.d(TAG, "Ad was dismissed (Next-Gen)")
                 nextGenAd = null
-                OzEventLogger.logAdDismissed(context, adUnitId, "reward_nextgen")
                 listener?.onAdDismissedFullScreenContent()
             }
 
@@ -141,7 +132,6 @@ class AdmobNextReward(
                 OzLog.e(TAG, "Ad failed to show: ${error.message} (Next-Gen)")
                 nextGenAd = null
                 val ozError = error.toOzError()
-                OzEventLogger.logAdShowFailed(context, adUnitId, "reward_nextgen", ozError.code, ozError.message)
                 listener?.onAdFailedToShowFullScreenContent(ozError)
             }
 
@@ -157,7 +147,6 @@ class AdmobNextReward(
 
             override fun onAdClicked() {
                 OzLog.d(TAG, "Ad was clicked (Next-Gen)")
-                OzEventLogger.logAdClickedCustom(context, adUnitId, "reward_nextgen")
                 listener?.onAdClicked()
             }
 

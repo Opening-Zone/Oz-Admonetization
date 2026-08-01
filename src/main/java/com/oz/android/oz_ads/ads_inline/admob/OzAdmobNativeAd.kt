@@ -18,6 +18,8 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : InlineAds<AdmobNativeAdvanced>(context, attrs, defStyleAttr) {
 
+    override val adFormat: String = "native"
+
     companion object {
         private const val TAG = "OzAdmobNativeAd"
     }
@@ -74,7 +76,7 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
      * @param key Key to identify the placement
      * @return Ad unit ID, null if not set yet
      */
-    fun getAdUnitId(key: String): String? = adUnitIds[key]
+    override fun getAdUnitId(key: String): String? = adUnitIds[key]
 
     override fun createAd(key: String): AdmobNativeAdvanced? {
         val adUnitId = adUnitIds[key]
@@ -89,7 +91,7 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
             }
 
             override fun onAdFailedToLoad(error: OzAdError) {
-                this@OzAdmobNativeAd.onAdLoadFailed(key, error.message)
+                this@OzAdmobNativeAd.onAdLoadFailed(key, error.message, error.code)
             }
 
             override fun onAdClicked() {
