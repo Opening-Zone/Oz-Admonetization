@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.os.Bundle
 import com.oz.android.utils.OzLog
+import com.oz.android.utils.event.OzEventLogger
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -103,21 +104,33 @@ abstract class AppLifecycleAdManager<T : Any> : Application.ActivityLifecycleCal
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
         
-        if (!isAppResumeEnabled || isShowingAd) return
+        if (!isAppResumeEnabled) {
+            currentActivity?.let { OzEventLogger.logAppResumeSkip(it, reason = "resume_disabled") }
+            return
+        }
+        if (isShowingAd) {
+            currentActivity?.let { OzEventLogger.logAppResumeSkip(it, reason = "already_showing") }
+            return
+        }
 
         if (disableAdResumeByClickAction) {
             disableAdResumeByClickAction = false
+            currentActivity?.let { OzEventLogger.logAppResumeSkip(it, reason = "disabled_by_click_action") }
             return
         }
 
         currentActivity?.let { activity ->
             // Check if current activity is in the disabled list
             for (disabledClass in disabledAppOpenList) {
-                if (disabledClass.name == activity.javaClass.name) return
+                if (disabledClass.name == activity.javaClass.name) {
+                    OzEventLogger.logAppResumeSkip(activity, reason = "activity_disabled")
+                    return
+                }
             }
 
             // Check if current activity is Splash
             if (splashActivityClass != null && splashActivityClass!!.name == activity.javaClass.name) {
+                OzEventLogger.logAppResumeSkip(activity, reason = "splash_activity")
                 return
             }
 
@@ -131,12 +144,14 @@ abstract class AppLifecycleAdManager<T : Any> : Application.ActivityLifecycleCal
      */
     fun showAdIfAvailable(activity: Activity) {
         if (!ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            OzEventLogger.logAppResumeSkip(activity, reason = "lifecycle_not_started")
             return
         }
 
         if (!isShowingAd) {
             OzLog.d(TAG, "Will show ad on activity: ${activity.javaClass.simpleName}")
             isShowingAd = true
+            OzEventLogger.logAppResumeShow(activity)
 
             showAd(activity) {
                 // On Complete (Dismissed or Failed)

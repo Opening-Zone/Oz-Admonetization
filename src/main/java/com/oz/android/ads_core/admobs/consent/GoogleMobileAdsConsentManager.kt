@@ -110,7 +110,9 @@ class GoogleMobileAdsConsentManager private constructor(context: Context) {
         activity: Activity,
         onConsentGatheringCompleteListener: OnConsentGatheringCompleteListener,
     ) {
-        OzEventLogger.logConsentFormShow(activity)
+        if (consentInformation.consentStatus == ConsentInformation.ConsentStatus.REQUIRED) {
+            OzEventLogger.logConsentFormShow(activity)
+        }
         // [START load_and_show_consent_form]
         UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { formError ->
             // Consent gathering process is complete.

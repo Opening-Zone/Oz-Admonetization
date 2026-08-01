@@ -1,11 +1,13 @@
 package com.oz.android
 
 import android.app.Activity
+import com.oz.android.ads_core.BuildConfig
 import com.oz.android.ads_core.admobs.AdMobManager
 import com.oz.android.ads_core.admobs.AdmobNextManager
 import com.oz.android.utils.enums.AdState
 import com.oz.android.utils.config.OzAdsConfig
 import com.oz.android.utils.config.AdsCoreType
+import com.oz.android.utils.event.OzEventLogger
 import com.oz.android.utils.listener.OzAdsResult
 import com.oz.android.utils.OzLog
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +48,34 @@ class OzAdsManager private constructor(
     // Fullscreen ad state (overlay ads like interstitial, app open)
     private val _isFullScreenAdShowing = MutableStateFlow(false)
     val isFullScreenAdShowing = _isFullScreenAdShowing.asStateFlow()
+
+    /**
+     * Network-agnostic consent check.
+     *
+     * Populated by the network init flow (e.g. [AdMobManager] / [AdmobNextManager]) after
+     * consent gathering completes. Defaults to `true` (permissive) so that non-GDPR
+     * regions or test builds without a consent flow are not silently blocked.
+     *
+     * Layer boundary: OzAdsManager (L1) must NOT import concrete network classes (L3/L4).
+     * The AdMob init layer calls [setConsentChecker] once, passing a lambda that wraps
+     * [GoogleMobileAdsConsentManager.canRequestAds] — keeping L1 fully network-agnostic.
+     */
+    @Volatile
+    private var consentChecker: () -> Boolean = { true }
+
+    /**
+     * Called by the network-specific init layer (L3) to inject the consent check logic.
+     * Must be called before any ad is loaded; typically invoked at the end of the consent flow.
+     */
+    fun setConsentChecker(checker: () -> Boolean) {
+        consentChecker = checker
+    }
+
+    /**
+     * Returns whether the current consent state allows ad requests.
+     * Delegates to the injected [consentChecker]; never calls L3 classes directly.
+     */
+    fun canRequestAds(): Boolean = consentChecker()
 
     // Ads state management (key -> state)
     private val adStates = ConcurrentHashMap<String, AdState>()
@@ -216,11 +246,16 @@ class OzAdsManager private constructor(
      * Other callers (e.g. SplashFragment) should use [awaitInitialization] instead.
      *
      * @param activity The activity context used for initialization
+     * @param consentChecker Optional lambda that returns whether ads can be requested based on
+     *   user consent. Provide this from the network-init layer (L3) — e.g.
+     *   `{ GoogleMobileAdsConsentManager.getInstance(activity).canRequestAds }`. When null,
+     *   the existing [consentChecker] is unchanged (defaults to permissive `{ true }`).
      * @param onSuccess Callback triggered when initialization completes successfully
      * @param onError Callback triggered if initialization fails
      */
     suspend fun init(
         activity: Activity,
+        consentChecker: (() -> Boolean)? = null,
         onSuccess: (() -> Unit)? = null,
         onError: ((Throwable) -> Unit)? = null
     ): OzAdsResult<Unit> {
@@ -243,10 +278,24 @@ class OzAdsManager private constructor(
         val initStartTime = System.currentTimeMillis()
         OzLog.d("OzAdsManager", "SDK initialization started...")
 
+        // Register the consent checker supplied by the network init layer (L3).
+        // This must happen before any ad load attempt so OzAds.loadAd() honours consent.
+        consentChecker?.let { setConsentChecker(it) }
+
         val result = suspendCancellableCoroutine<OzAdsResult<Unit>> { continuation ->
             if (config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {
                 // PATH A: GMA Next-Gen SDK — delegates to AdmobNextManager
-                val appId = getAdMobAppId(activity) ?: "ca-app-pub-3940256099942544~3347511713"
+                val appId = getAdMobAppId(activity)
+                if (appId.isNullOrEmpty()) {
+                    OzLog.e("OzAdsManager", "AdMob APPLICATION_ID missing in manifest!")
+                    OzEventLogger.logAdsSdkInitException(activity, "app_id_missing")
+                    if (BuildConfig.DEBUG) {
+                        error("AdMob APPLICATION_ID missing in manifest!")
+                    } else {
+                        if (continuation.isActive) continuation.resume(OzAdsResult.Failure(IllegalStateException("AdMob APPLICATION_ID missing")))
+                        return@suspendCancellableCoroutine
+                    }
+                }
                 AdmobNextManager.getInstance().initializeMobileAdsSdk(appId, activity) {
                     val elapsed = System.currentTimeMillis() - initStartTime
                     OzLog.d("OzAdsManager", "✅ SDK fully initialized in ${elapsed}ms (Next-Gen)")

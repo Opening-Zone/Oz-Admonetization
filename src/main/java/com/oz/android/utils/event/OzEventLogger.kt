@@ -97,6 +97,15 @@ object OzEventLogger {
 
     // --- Ad Flow & Lifecycle Events ---
 
+    fun logAdLoadAttempt(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_load_attempt", buildAdParams(adUnitId, adFormat, key))
+    }
+
     fun logAdOpportunity(
         context: Context,
         adUnitId: String? = null,
@@ -114,6 +123,59 @@ object OzEventLogger {
         key: String? = null
     ) {
         logSimpleEvent(context, "ad_skip", buildAdParams(adUnitId, adFormat, key, reason = reason))
+    }
+
+    fun logAdExpired(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        reason: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_expired", buildAdParams(adUnitId, adFormat, key, reason = reason))
+    }
+
+    fun logAdRefreshed(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "ad_refreshed", buildAdParams(adUnitId, adFormat, key))
+    }
+
+    fun logAdRefreshFailed(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        errorCode: Int? = null,
+        errorMessage: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(
+            context,
+            "ad_refresh_failed",
+            buildAdParams(adUnitId, adFormat, key, errorCode = errorCode, errorMessage = errorMessage)
+        )
+    }
+
+    fun logAppResumeShow(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "app_resume_show", buildAdParams(adUnitId, adFormat, key))
+    }
+
+    fun logAppResumeSkip(
+        context: Context,
+        adUnitId: String? = null,
+        adFormat: String? = null,
+        reason: String? = null,
+        key: String? = null
+    ) {
+        logSimpleEvent(context, "app_resume_skip", buildAdParams(adUnitId, adFormat, key, reason = reason))
     }
 
     fun logAdRequest(
@@ -165,14 +227,14 @@ object OzEventLogger {
         logSimpleEvent(context, "ad_show_called", buildAdParams(adUnitId, adFormat, key))
     }
 
-    @Deprecated("Removed in favor of app_event_impression / ad_revenue_paid")
+    @Deprecated("Removed — use ad_show_called + ad_revenue_paid / ad_impression instead")
     fun logAdShowSuccess(
         context: Context,
         adUnitId: String? = null,
         adFormat: String? = null,
         key: String? = null
     ) {
-        // ad_show_success is removed — app_event_impression / ad_revenue_paid tracks impressions
+        // ad_show_success is removed — ad_revenue_paid tracks impressions
     }
 
     fun logAdShowFailed(
@@ -274,7 +336,6 @@ object OzEventLogger {
                 putString(FirebaseAnalytics.Param.AD_PLATFORM, "AdMob")
                 putInt("precision", precision)
             }
-            firebaseAnalytics.logEvent("app_event_impression", revenueParams)
             firebaseAnalytics.logEvent("ad_revenue_paid", revenueParams)
         } catch (e: Exception) {
             OzLog.e(TAG, "Error logging paid ad impression event", e)

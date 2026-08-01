@@ -138,10 +138,13 @@ class AdmobNextBanner(
                     ad.bannerAdRefreshCallback = object : BannerAdRefreshCallback {
                         override fun onAdRefreshed() {
                             OzLog.d(TAG, "Next-Gen Banner ad refreshed")
+                            OzEventLogger.logAdRefreshed(context, adUnitId, "banner_nextgen")
                         }
 
                         override fun onAdFailedToRefresh(error: LoadAdError) {
                             OzLog.e(TAG, "Next-Gen Banner ad failed to refresh: ${error.message}")
+                            val ozErr = error.toOzError()
+                            OzEventLogger.logAdRefreshFailed(context, adUnitId, "banner_nextgen", ozErr.code, ozErr.message)
                         }
                     }
 
