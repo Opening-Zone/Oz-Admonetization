@@ -11,6 +11,17 @@ plugins {
     id("signing")
 }
 
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun getPublishProperty(name: String, defaultValue: String = ""): String {
+    return (localProperties.getProperty(name) ?: project.findProperty(name) as? String ?: defaultValue).trim()
+}
+
 android {
     namespace = "com.oz.android.ads_core"
     compileSdk {
@@ -20,6 +31,8 @@ android {
     defaultConfig {
         minSdk = 24
         targetSdk = 36
+
+        buildConfigField("String", "LIB_VERSION", "\"${getPublishProperty("PUBLISH_VERSION", "1.0.4")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -95,22 +108,11 @@ android {
     }
 }
 
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) {
-        file.inputStream().use { load(it) }
-    }
-}
-
 localProperties.forEach { key, value ->
     val keyStr = key.toString()
     if (keyStr.startsWith("signing.")) {
         extra.set(keyStr, value.toString().trim())
     }
-}
-
-fun getPublishProperty(name: String, defaultValue: String = ""): String {
-    return (localProperties.getProperty(name) ?: project.findProperty(name) as? String ?: defaultValue).trim()
 }
 
 afterEvaluate {

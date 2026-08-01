@@ -246,18 +246,18 @@ class OzAdsManager private constructor(
      * Other callers (e.g. SplashFragment) should use [awaitInitialization] instead.
      *
      * @param activity The activity context used for initialization
+     * @param onSuccess Callback triggered when initialization completes successfully
+     * @param onError Callback triggered if initialization fails
      * @param consentChecker Optional lambda that returns whether ads can be requested based on
      *   user consent. Provide this from the network-init layer (L3) — e.g.
      *   `{ GoogleMobileAdsConsentManager.getInstance(activity).canRequestAds }`. When null,
      *   the existing [consentChecker] is unchanged (defaults to permissive `{ true }`).
-     * @param onSuccess Callback triggered when initialization completes successfully
-     * @param onError Callback triggered if initialization fails
      */
     suspend fun init(
         activity: Activity,
-        consentChecker: (() -> Boolean)? = null,
         onSuccess: (() -> Unit)? = null,
-        onError: ((Throwable) -> Unit)? = null
+        onError: ((Throwable) -> Unit)? = null,
+        consentChecker: (() -> Boolean)? = null
     ): OzAdsResult<Unit> {
         if (initialized) {
             onSuccess?.invoke()
@@ -276,11 +276,14 @@ class OzAdsManager private constructor(
 
         initStarted = true
         val initStartTime = System.currentTimeMillis()
-        OzLog.d("OzAdsManager", "SDK initialization started...")
+        OzLog.d("OzAdsManager", "SDK initialization started (v${BuildConfig.LIB_VERSION})...")
 
-        // Register the consent checker supplied by the network init layer (L3).
-        // This must happen before any ad load attempt so OzAds.loadAd() honours consent.
-        consentChecker?.let { setConsentChecker(it) }
+        // Register the consent checker supplied by the caller/network init layer.
+        if (consentChecker != null) {
+            setConsentChecker(consentChecker)
+        } else {
+            OzLog.w("OzAdsManager", "No consentChecker provided to init() — ads will load using default permissive check.")
+        }
 
         val result = suspendCancellableCoroutine<OzAdsResult<Unit>> { continuation ->
             if (config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {

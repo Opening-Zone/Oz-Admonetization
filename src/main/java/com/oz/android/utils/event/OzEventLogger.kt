@@ -106,6 +106,7 @@ object OzEventLogger {
         logSimpleEvent(context, "ad_load_attempt", buildAdParams(adUnitId, adFormat, key))
     }
 
+    @Deprecated("Replaced by logAdLoadAttempt to correctly reflect load attempt semantics.", ReplaceWith("logAdLoadAttempt(context, adUnitId, adFormat, key)"))
     fun logAdOpportunity(
         context: Context,
         adUnitId: String? = null,

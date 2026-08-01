@@ -34,6 +34,9 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
         private const val TAG = "AdsOverlayManager"
         private val DEFAULT_TIME_GAP = 30000L
 
+        const val REASON_FULLSCREEN_BUSY = "fullscreen_busy"
+        const val REASON_COOLDOWN_ACTIVE = "cooldown_active"
+
         /**
          * Global storage for the last closed time.
          * Key: The Ad Category String (usually the class name).
@@ -148,7 +151,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
     override fun showAds(key: String) {
         if (!OzAdsManager.getInstance().canShowFullScreenAd()) {
             OzLog.d(TAG, "Skipping showAds for key: $key. Another fullscreen ad is already showing.")
-            onAdShowBlocked(key, "Another fullscreen ad is already showing.")
+            onAdShowBlocked(key, REASON_FULLSCREEN_BUSY)
             return
         }
 
@@ -157,7 +160,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
             val category = getAdCategory()
             OzLog.d(TAG, "Skipping showAds ($category) for key: $key. Cooldown active. Remaining: ${remaining}ms")
 
-            onAdShowBlocked(key, "Time gap not satisfied. Wait ${remaining}ms")
+            onAdShowBlocked(key, REASON_COOLDOWN_ACTIVE)
             return
         }
         super.showAds(key)

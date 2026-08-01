@@ -27,6 +27,8 @@ import com.google.android.ump.UserMessagingPlatform
 import com.oz.android.ads_core.admobs.AdMobManager
 import com.oz.android.utils.event.OzEventLogger
 
+import com.oz.android.ads_core.BuildConfig
+
 /**
  * The Google Mobile Ads SDK provides the User Messaging Platform (Google's IAB Certified consent
  * management platform) as one solution to capture consent for users in GDPR impacted countries.
@@ -62,14 +64,14 @@ class GoogleMobileAdsConsentManager private constructor(context: Context) {
         activity: Activity,
         onConsentGatheringCompleteListener: OnConsentGatheringCompleteListener,
     ) {
-        // For testing purposes, you can force a DebugGeography of EEA or NOT_EEA.
-        val debugSettings =
-            ConsentDebugSettings.Builder(activity)
-                // .setDebugGeography(ConsentDebugSettings.DebugGeography.DEBUG_GEOGRAPHY_EEA)
+        val paramsBuilder = ConsentRequestParameters.Builder()
+        if (BuildConfig.DEBUG) {
+            val debugSettings = ConsentDebugSettings.Builder(activity)
                 .addTestDeviceHashedId(AdMobManager.TEST_DEVICE_HASHED_ID)
                 .build()
-
-        val params = ConsentRequestParameters.Builder().setConsentDebugSettings(debugSettings).build()
+            paramsBuilder.setConsentDebugSettings(debugSettings)
+        }
+        val params = paramsBuilder.build()
 
         // Log consent check start
         OzEventLogger.logConsentCheckStart(activity)
@@ -93,14 +95,8 @@ class GoogleMobileAdsConsentManager private constructor(context: Context) {
                     requestConsentError.errorCode,
                     requestConsentError.message
                 )
-                if (canRequestAds) {
-                    OzEventLogger.logConsentAdsReady(activity)
-                } else {
-                    OzEventLogger.logConsentAdsBlocked(activity, requestConsentError.message)
-                }
-                // [START_EXCLUDE silent]
-                onConsentGatheringCompleteListener.consentGatheringComplete(requestConsentError)
-                // [END_EXCLUDE]
+                // Try showing form if required despite info update error, or finalize status
+                loadAndShowConsentFormIfRequired(activity, onConsentGatheringCompleteListener)
             },
         )
         // [END request_consent_info_update]
