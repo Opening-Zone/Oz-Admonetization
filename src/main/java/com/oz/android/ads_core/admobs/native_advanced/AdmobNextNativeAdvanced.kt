@@ -134,10 +134,11 @@ class AdmobNextNativeAdvanced(
                 nextGenNativeAd = null
                 clearPendingState()
 
-                OzEventLogger.logAdLoadFailed(context, adUnitId, "native_nextgen", error.code.ordinal, error.message)
+                val ozError = error.toOzError()
+                OzEventLogger.logAdLoadFailed(context, adUnitId, "native_nextgen", ozError.code, ozError.message)
 
                 // Listener callback: called on GMA BG thread — caller decides thread.
-                listener?.onAdFailedToLoad(error.toOzError())
+                listener?.onAdFailedToLoad(ozError)
             }
         }
 
@@ -193,7 +194,6 @@ class AdmobNextNativeAdvanced(
 
             container.removeAllViews()
             container.addView(nextGenAdView)
-            OzEventLogger.logAdShowSuccess(context, adUnitId, "native_nextgen")
             OzLog.d(TAG, "Native ad displayed in container (Next-Gen)")
         }
 
@@ -304,7 +304,6 @@ class AdmobNextNativeAdvanced(
         ad.adEventCallback = object : NativeAdEventCallback {
             // All callbacks fire on GMA BG thread — callers decide their own threading.
             override fun onAdShowedFullScreenContent() {
-                OzEventLogger.logAdShowSuccess(context, adUnitId, "native_nextgen")
                 listener?.onAdShowedFullScreenContent()
             }
 
@@ -314,8 +313,9 @@ class AdmobNextNativeAdvanced(
             }
 
             override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
-                OzEventLogger.logAdShowFailed(context, adUnitId, "native_nextgen", error.code.ordinal, error.message)
-                listener?.onAdFailedToShowFullScreenContent(error.toOzError())
+                val ozError = error.toOzError()
+                OzEventLogger.logAdShowFailed(context, adUnitId, "native_nextgen", ozError.code, ozError.message)
+                listener?.onAdFailedToShowFullScreenContent(ozError)
             }
 
             override fun onAdImpression() {

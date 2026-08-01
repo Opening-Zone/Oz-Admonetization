@@ -284,7 +284,7 @@ abstract class OzAds<AdType> : ViewGroup {
             OzAdsManager.getInstance().setAd(key, ad as Any)
             setAdState(key, AdState.LOADED)
             OzLog.d(TAG, "Ad loaded successfully for key: $key")
-            OzEventLogger.logAdLoadSuccess(context, key = key)
+            // Note: OzEventLogger is called in ads_core adapter layer (Layer 2) with full adUnitId & adFormat params.
 
             // Check if there's a pending show globally for this key
             OzAdsManager.getInstance().executePendingShow(key)
@@ -307,7 +307,7 @@ abstract class OzAds<AdType> : ViewGroup {
         // Clear pending show since load failed
         OzAdsManager.getInstance().clearPendingShow(key)
         OzAdsManager.getInstance().logAdEvent("ad_load_failed", key, message)
-        OzEventLogger.logAdLoadFailed(context, errorMessage = message, key = key)
+        // Note: OzEventLogger is called in ads_core adapter layer (Layer 2) with full adUnitId & adFormat params.
     }
 
     /**
@@ -319,7 +319,7 @@ abstract class OzAds<AdType> : ViewGroup {
         OzLog.d(TAG, "Ad shown successfully for key: $key")
         // State was already set to SHOWING in showAds()
         OzAdsManager.getInstance().logAdEvent("ad_shown", key)
-        OzEventLogger.logAdShowSuccess(context, key = key)
+        // Note: OzEventLogger is called in ads_core adapter layer (Layer 2) with full adUnitId & adFormat params.
     }
 
     /**
@@ -331,7 +331,7 @@ abstract class OzAds<AdType> : ViewGroup {
         if (adKey != key) return
 
         OzLog.d(TAG, "Ad dismissed for key: $key, cleaning up")
-        OzEventLogger.logAdDismissed(context, key = key)
+        // Note: OzEventLogger is called in ads_core adapter layer (Layer 2) with full adUnitId & adFormat params.
 
         // Destroy ad to prevent memory leak
         onDestroyAd(key)
@@ -353,7 +353,7 @@ abstract class OzAds<AdType> : ViewGroup {
         setAdState(key, AdState.IDLE)
         OzAdsManager.getInstance().clearPendingShow(key)
         OzAdsManager.getInstance().logAdEvent("ad_show_failed", key, message)
-        OzEventLogger.logAdShowFailed(context, errorMessage = message, key = key)
+        // Note: OzEventLogger is called in ads_core adapter layer (Layer 2) with full adUnitId & adFormat params.
     }
 
     /**
@@ -364,7 +364,6 @@ abstract class OzAds<AdType> : ViewGroup {
         if (adKey != key) return
         OzLog.w(TAG, "Ad show blocked for key: $key. Reason: ${reason ?: "Unknown"}")
         OzAdsManager.getInstance().logAdEvent("ad_show_blocked", key, reason)
-        OzEventLogger.logAdSkip(context, reason = reason ?: "show_blocked", key = key)
     }
 
     /**
@@ -380,7 +379,7 @@ abstract class OzAds<AdType> : ViewGroup {
      */
     protected open fun onAdClicked(key: String) {
         OzLog.d(TAG, "Ad clicked for key: $key")
-        OzEventLogger.logAdClickedCustom(context, key = key)
+        // Note: OzEventLogger is called in ads_core adapter layer (Layer 2) with full adUnitId & adFormat params.
     }
 
     /**

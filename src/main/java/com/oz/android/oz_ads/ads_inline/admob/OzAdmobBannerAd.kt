@@ -98,6 +98,11 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
                 // Bridge to OzAds.onAdClicked()
                 this@OzAdmobBannerAd.onAdClicked(key)
             }
+
+            override fun onAdImpression() {
+                // Update internal state to SHOWING and stop shimmer when AdMob confirms impression
+                this@OzAdmobBannerAd.onAdShown(key)
+            }
         }
 
         val mergedListener = bannerListener.merge(listener)
@@ -180,8 +185,7 @@ open class OzAdmobBannerAd @JvmOverloads constructor(
         currentBannerAd = ad
         // Show banner in this ViewGroup
         ad.show(this)
-        // Notify parent that the ad has been shown
-        onAdShown(key)
+        // NOTE: onAdShown(key) is called from onAdImpression() when AdMob confirms visual impression
     }
 
     override fun hideAds() {

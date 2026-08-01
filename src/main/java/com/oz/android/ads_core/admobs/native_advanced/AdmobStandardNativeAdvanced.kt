@@ -247,7 +247,6 @@ class AdmobStandardNativeAdvanced(
             }
             container.addView(nativeAdView)
         }
-        OzEventLogger.logAdShowSuccess(context, adUnitId, "native")
         OzLog.d(TAG, "Native ad displayed in container")
     }
 

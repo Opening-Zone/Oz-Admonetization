@@ -95,6 +95,11 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
             override fun onAdClicked() {
                 this@OzAdmobNativeAd.onAdClicked(key)
             }
+
+            override fun onAdImpression() {
+                // Update internal state to SHOWING and stop shimmer when AdMob confirms impression
+                this@OzAdmobNativeAd.onAdShown(key)
+            }
         }
 
         val mergedListener = nativeListener.merge(listener)
@@ -171,8 +176,7 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
         OzLog.d(TAG, "Showing native ad for key: $key")
         // Show native ad in this ViewGroup
         ad.show(this, nativeAdView)
-        // Notify parent that the ad has been shown
-        onAdShown(key)
+        // NOTE: onAdShown(key) is called from onAdImpression() when AdMob confirms visual impression
     }
 
     override fun hideAds() {

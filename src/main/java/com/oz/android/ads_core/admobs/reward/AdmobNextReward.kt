@@ -67,10 +67,11 @@ class AdmobNextReward(
                     OzLog.e(TAG, "Rewarded ad failed to load: ${error.message} (Next-Gen)")
                     nextGenAd = null
 
-                    OzEventLogger.logAdLoadFailed(context, adUnitId, "reward_nextgen", error.code.ordinal, error.message)
+                    val ozError = error.toOzError()
+                    OzEventLogger.logAdLoadFailed(context, adUnitId, "reward_nextgen", ozError.code, ozError.message)
 
                     // Listener callback: called on GMA BG thread — caller decides thread.
-                    listener?.onAdFailedToLoad(error.toOzError())
+                    listener?.onAdFailedToLoad(ozError)
                 }
             }
         )
@@ -139,13 +140,13 @@ class AdmobNextReward(
             override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
                 OzLog.e(TAG, "Ad failed to show: ${error.message} (Next-Gen)")
                 nextGenAd = null
-                OzEventLogger.logAdShowFailed(context, adUnitId, "reward_nextgen", error.code.ordinal, error.message)
-                listener?.onAdFailedToShowFullScreenContent(error.toOzError())
+                val ozError = error.toOzError()
+                OzEventLogger.logAdShowFailed(context, adUnitId, "reward_nextgen", ozError.code, ozError.message)
+                listener?.onAdFailedToShowFullScreenContent(ozError)
             }
 
             override fun onAdShowedFullScreenContent() {
                 OzLog.d(TAG, "Ad showed fullscreen content (Next-Gen)")
-                OzEventLogger.logAdShowSuccess(context, adUnitId, "reward_nextgen")
                 listener?.onAdShowedFullScreenContent()
             }
 

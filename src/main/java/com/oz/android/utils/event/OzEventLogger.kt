@@ -165,13 +165,14 @@ object OzEventLogger {
         logSimpleEvent(context, "ad_show_called", buildAdParams(adUnitId, adFormat, key))
     }
 
+    @Deprecated("Removed in favor of app_event_impression / ad_revenue_paid")
     fun logAdShowSuccess(
         context: Context,
         adUnitId: String? = null,
         adFormat: String? = null,
         key: String? = null
     ) {
-        logSimpleEvent(context, "ad_show_success", buildAdParams(adUnitId, adFormat, key))
+        // ad_show_success is removed — app_event_impression / ad_revenue_paid tracks impressions
     }
 
     fun logAdShowFailed(
@@ -196,7 +197,6 @@ object OzEventLogger {
         key: String? = null
     ) {
         logSimpleEvent(context, "ad_clicked_custom", buildAdParams(adUnitId, adFormat, key))
-        logClickAdsEvent(context, adUnitId ?: "unknown")
     }
 
     fun logAdDismissed(
@@ -281,19 +281,7 @@ object OzEventLogger {
         }
     }
 
-    fun logClickAdsEvent(context: Context, adUnitId: String) {
-        try {
-            OzLog.d(TAG, "User click ad for ad unit $adUnitId.")
-
-            val params = Bundle().apply {
-                putString("ad_unit_id", adUnitId)
-            }
-
-            FirebaseAnalytics.getInstance(context).logEvent("ad_click", params)
-        } catch (e: Exception) {
-            OzLog.e(TAG, "Error logging click ad event", e)
-        }
-    }
+    // Note: logClickAdsEvent() was removed as "ad_click" is a reserved Firebase event name.
 
     fun logPaidAdImpressionNextGen(
         context: Context,

@@ -114,7 +114,6 @@ class AdmobNextBanner(
                         }
 
                         override fun onAdShowedFullScreenContent() {
-                            OzEventLogger.logAdShowSuccess(context, adUnitId, "banner_nextgen")
                             listener?.onAdShowedFullScreenContent()
                         }
 
@@ -124,8 +123,9 @@ class AdmobNextBanner(
                         }
 
                         override fun onAdFailedToShowFullScreenContent(error: FullScreenContentError) {
-                            OzEventLogger.logAdShowFailed(context, adUnitId, "banner_nextgen", error.code.ordinal, error.message)
-                            listener?.onAdFailedToShowFullScreenContent(error.toOzError())
+                            val ozError = error.toOzError()
+                            OzEventLogger.logAdShowFailed(context, adUnitId, "banner_nextgen", ozError.code, ozError.message)
+                            listener?.onAdFailedToShowFullScreenContent(ozError)
                         }
 
                         override fun onAdPaid(value: AdValue) {
@@ -166,10 +166,10 @@ class AdmobNextBanner(
                     OzLog.e(TAG, "Banner ad failed to load: ${error.message} (Next-Gen)")
                     pendingContainer = null
 
-                    OzEventLogger.logAdLoadFailed(context, adUnitId, "banner_nextgen", error.code.ordinal, error.message)
-
+                    val ozError = error.toOzError()
+                    OzEventLogger.logAdLoadFailed(context, adUnitId, "banner_nextgen", ozError.code, ozError.message)
                     // Listener callback: called on GMA BG thread — caller decides thread.
-                    listener?.onAdFailedToLoad(error.toOzError())
+                    listener?.onAdFailedToLoad(ozError)
                 }
             }
         )
@@ -196,7 +196,6 @@ class AdmobNextBanner(
 
             container.removeAllViews()
             container.addView(currentAdView)
-            OzEventLogger.logAdShowSuccess(context, adUnitId, "banner_nextgen")
             OzLog.d(TAG, "Banner ad displayed in container")
         }
 

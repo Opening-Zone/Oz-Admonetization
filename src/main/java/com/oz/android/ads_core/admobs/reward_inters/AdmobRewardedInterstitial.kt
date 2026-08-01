@@ -144,9 +144,8 @@ class AdmobRewardedInterstitial(
             }
 
             override fun onAdShowedFullScreenContent() {
-                // Called when fullscreen content is shown
-                OzLog.d(TAG, "Ad showed fullscreen content")
-                OzEventLogger.logAdShowSuccess(context, adUnitId, "rewarded_interstitial")
+                OzLog.d(TAG, "Ad showed fullscreen content.")
+                listener?.onAdShowedFullScreenContent()
             }
 
             override fun onAdImpression() {
