@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-08-02
+
+### Added
+- **Default L3 Consent Wiring (`P1`)**: `AdmobNextManager` and `AdMobManager` now automatically register `setConsentChecker { GoogleMobileAdsConsentManager.getInstance(context).canRequestAds }` during `initializeMobileAdsSdk()`. Guarantees consent state is checked out-of-the-box without requiring callers to pass a manual lambda.
+- **Telemetry Event `ads_sdk_init_timeout` (`P4`)**: `OzAdsManager.awaitInitialization()` and `OzAdsManager.init()` now log `ads_sdk_init_timeout` (`timeout_ms`, `sdk_type`) if initialization exceeds timeout before completing.
+- **Configurable Init Timeout (`P5`)**: Added `initTimeoutMs: Long = 5_000L` property to `OzAdsConfig` and enforced it in `OzAdsManager.init()` via `withTimeoutOrNull(config.initTimeoutMs)` so application callers can tune or A/B test SDK initialization timeout without risk of hanging forever.
+
+### Fixed
+- **Version Catalog Synchronization (`P7`)**: Updated `playServicesAds` version in `gradle/libs.versions.toml` to `25.4.0` to match `build.gradle.kts`.
+
+### Architecture & Policy Notes
+- **Omitted Error Retry (`P3 Policy Note`)**: Retrying ad requests immediately after a load failure / `NO_FILL` is strictly unrecommended by AdMob policies and best practices as it creates wasteful network traffic and potential policy violations. Error retry logic has been intentionally omitted from `InlineAds.kt` and `OzAdsConfig.kt`.
+- **Mediation Adapter Placement (`P8 Clarification`)**: The core `android-ads` library deliberately omits third-party mediation adapter dependencies (Pangle, Vungle, Mintegral, AppLovin, Unity, Facebook). Mediation adapters are intentionally declared at the **application level** (`app/build.gradle.kts`) to allow each host app to customize its monetization stack and mediation strategy independently based on target audience and program policies (e.g. Designed for Families).
+
+### Deferred / Skipped
+- **Zone B Post-Timeout Retry (`P2`)**: Deferred post-timeout retry logic until telemetry data from `ads_sdk_init_timeout` (P4) quantifies production timeout frequency.
+
+---
+
 ## [1.0.4] - 2026-08-01
 
 ### Added

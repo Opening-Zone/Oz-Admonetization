@@ -60,6 +60,11 @@ class AdmobNextManager private constructor() {
         val startTime = System.currentTimeMillis()
         com.oz.android.utils.event.OzEventLogger.logAdsSdkInitStart(context, "AdMob_NextGen")
 
+        // Automatically wire the UMP consent check supplier into OzAdsManager
+        com.oz.android.OzAdsManager.getInstance().setConsentChecker {
+            com.oz.android.ads_core.admobs.consent.GoogleMobileAdsConsentManager.getInstance(context).canRequestAds
+        }
+
         OzLog.d(TAG, "Initializing Next-Gen Mobile Ads SDK with App ID: $appId")
 
         // Per Google's official guidance, MobileAds.initialize must run on a background thread.

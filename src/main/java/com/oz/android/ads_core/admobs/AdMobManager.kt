@@ -59,6 +59,11 @@ class AdMobManager private constructor() {
         val startTime = System.currentTimeMillis()
         com.oz.android.utils.event.OzEventLogger.logAdsSdkInitStart(context, "AdMob_Standard")
 
+        // Automatically wire the UMP consent check supplier into OzAdsManager
+        com.oz.android.OzAdsManager.getInstance().setConsentChecker {
+            com.oz.android.ads_core.admobs.consent.GoogleMobileAdsConsentManager.getInstance(context).canRequestAds
+        }
+
         // Initialize standard GMS MobileAds reflectively
         try {
             OzLog.d(TAG, "Initializing GMS Mobile Ads SDK reflectively...")

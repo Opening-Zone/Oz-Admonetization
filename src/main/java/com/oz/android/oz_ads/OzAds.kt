@@ -109,7 +109,7 @@ abstract class OzAds<AdType> : ViewGroup {
             val scope = findViewTreeLifecycleOwner()?.lifecycleScope ?: ProcessLifecycleOwner.get().lifecycleScope
             initRetryJob?.cancel()
             initRetryJob = scope.launch {
-                OzAdsManager.getInstance().awaitInitialization()
+                OzAdsManager.getInstance().awaitInitialization(context)
                 if (OzAdsManager.getInstance().isAdInitialized() && adKey == key) {
                     val state = getAdState(key)
                     if (state == AdState.IDLE) {

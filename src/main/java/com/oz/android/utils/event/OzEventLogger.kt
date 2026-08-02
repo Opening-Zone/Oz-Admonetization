@@ -95,6 +95,14 @@ object OzEventLogger {
         logSimpleEvent(context, "ads_sdk_init_exception", params)
     }
 
+    fun logAdsSdkInitTimeout(context: Context, timeoutMs: Long, sdkType: String = "AdMob") {
+        val params = Bundle().apply {
+            putLong("timeout_ms", timeoutMs)
+            putString("sdk_type", sdkType)
+        }
+        logSimpleEvent(context, "ads_sdk_init_timeout", params)
+    }
+
     // --- Ad Flow & Lifecycle Events ---
 
     fun logAdLoadAttempt(

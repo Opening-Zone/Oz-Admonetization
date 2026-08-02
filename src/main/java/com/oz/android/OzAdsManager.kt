@@ -16,6 +16,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Business layer manager for handling ads.
@@ -285,42 +286,53 @@ class OzAdsManager private constructor(
             OzLog.w("OzAdsManager", "No consentChecker provided to init() — ads will load using default permissive check.")
         }
 
-        val result = suspendCancellableCoroutine<OzAdsResult<Unit>> { continuation ->
-            if (config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {
-                // PATH A: GMA Next-Gen SDK — delegates to AdmobNextManager
-                val appId = getAdMobAppId(activity)
-                if (appId.isNullOrEmpty()) {
-                    OzLog.e("OzAdsManager", "AdMob APPLICATION_ID missing in manifest!")
-                    OzEventLogger.logAdsSdkInitException(activity, "app_id_missing")
-                    if (BuildConfig.DEBUG) {
-                        error("AdMob APPLICATION_ID missing in manifest!")
-                    } else {
-                        if (continuation.isActive) continuation.resume(OzAdsResult.Failure(IllegalStateException("AdMob APPLICATION_ID missing")))
-                        return@suspendCancellableCoroutine
+        val timeoutMs = config.initTimeoutMs
+        val initResult = withTimeoutOrNull(timeoutMs.milliseconds) {
+            suspendCancellableCoroutine<OzAdsResult<Unit>> { continuation ->
+                if (config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {
+                    // PATH A: GMA Next-Gen SDK — delegates to AdmobNextManager
+                    val appId = getAdMobAppId(activity)
+                    if (appId.isNullOrEmpty()) {
+                        OzLog.e("OzAdsManager", "AdMob APPLICATION_ID missing in manifest!")
+                        OzEventLogger.logAdsSdkInitException(activity, "app_id_missing")
+                        if (BuildConfig.DEBUG) {
+                            error("AdMob APPLICATION_ID missing in manifest!")
+                        } else {
+                            if (continuation.isActive) continuation.resume(OzAdsResult.Failure(IllegalStateException("AdMob APPLICATION_ID missing")))
+                            return@suspendCancellableCoroutine
+                        }
                     }
-                }
-                AdmobNextManager.getInstance().initializeMobileAdsSdk(appId, activity) {
-                    val elapsed = System.currentTimeMillis() - initStartTime
-                    OzLog.d("OzAdsManager", "✅ SDK fully initialized in ${elapsed}ms (Next-Gen)")
-                    initialized = true
-                    initDeferred.complete(OzAdsResult.Success(Unit))
-                    onSuccess?.invoke()
-                    if (continuation.isActive) continuation.resume(OzAdsResult.Success(Unit))
-                }
-            } else {
-                // PATH B: Standard GMS AdMob SDK — delegates to AdMobManager
-                adMobManager.initializeMobileAdsSdk(config.testDeviceIds, activity) {
-                    val elapsed = System.currentTimeMillis() - initStartTime
-                    OzLog.d("OzAdsManager", "✅ SDK fully initialized in ${elapsed}ms (Standard GMS)")
-                    initialized = true
-                    initDeferred.complete(OzAdsResult.Success(Unit))
-                    onSuccess?.invoke()
-                    if (continuation.isActive) continuation.resume(OzAdsResult.Success(Unit))
+                    AdmobNextManager.getInstance().initializeMobileAdsSdk(appId, activity) {
+                        val elapsed = System.currentTimeMillis() - initStartTime
+                        OzLog.d("OzAdsManager", "✅ SDK fully initialized in ${elapsed}ms (Next-Gen)")
+                        initialized = true
+                        initDeferred.complete(OzAdsResult.Success(Unit))
+                        onSuccess?.invoke()
+                        if (continuation.isActive) continuation.resume(OzAdsResult.Success(Unit))
+                    }
+                } else {
+                    // PATH B: Standard GMS AdMob SDK — delegates to AdMobManager
+                    adMobManager.initializeMobileAdsSdk(config.testDeviceIds, activity) {
+                        val elapsed = System.currentTimeMillis() - initStartTime
+                        OzLog.d("OzAdsManager", "✅ SDK fully initialized in ${elapsed}ms (Standard GMS)")
+                        initialized = true
+                        initDeferred.complete(OzAdsResult.Success(Unit))
+                        onSuccess?.invoke()
+                        if (continuation.isActive) continuation.resume(OzAdsResult.Success(Unit))
+                    }
                 }
             }
         }
 
-        return result
+        if (initResult == null) {
+            OzLog.w("OzAdsManager", "SDK init timed out in init() after ${timeoutMs}ms — proceeding.")
+            OzEventLogger.logAdsSdkInitTimeout(activity, timeoutMs)
+            initialized = true
+            initDeferred.complete(OzAdsResult.Success(Unit))
+            return OzAdsResult.Success(Unit)
+        }
+
+        return initResult
     }
 
     fun isAdInitialized(): Boolean = initialized
@@ -342,15 +354,17 @@ class OzAdsManager private constructor(
      * - Suspends for up to [INIT_TIMEOUT_MS] ms waiting for [init] to signal completion.
      * - Returns [OzAdsResult.Success] regardless (either SDK ready, or timeout elapsed).
      */
-    suspend fun awaitInitialization(): OzAdsResult<Unit> {
+    suspend fun awaitInitialization(context: android.content.Context? = null): OzAdsResult<Unit> {
         if (initialized) return OzAdsResult.Success(Unit)
 
-        val result = withTimeoutOrNull(INIT_TIMEOUT_MS) { initDeferred.await() }
+        val timeoutMs = config.initTimeoutMs
+        val result = withTimeoutOrNull(timeoutMs.milliseconds) { initDeferred.await() }
         if (result == null) {
             // Timeout elapsed — the SDK/mediation adapter is taking abnormally long.
             // Mark as initialized so subsequent init() calls are not blocked, then proceed.
             // Adapters that finish later will still serve ads on their next fill opportunity.
-            OzLog.w("OzAdsManager", "SDK init timeout after ${INIT_TIMEOUT_MS}ms — proceeding to load ads. Init continues in background.")
+            OzLog.w("OzAdsManager", "SDK init timeout after ${timeoutMs}ms — proceeding to load ads. Init continues in background.")
+            context?.let { OzEventLogger.logAdsSdkInitTimeout(it, timeoutMs) }
             initialized = true
         }
         return OzAdsResult.Success(Unit)
