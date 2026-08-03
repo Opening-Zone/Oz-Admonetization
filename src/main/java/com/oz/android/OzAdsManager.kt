@@ -326,7 +326,7 @@ class OzAdsManager private constructor(
 
         if (initResult == null) {
             OzLog.w("OzAdsManager", "SDK init timed out in init() after ${timeoutMs}ms — proceeding.")
-            OzEventLogger.logAdsSdkInitTimeout(activity, timeoutMs)
+            OzEventLogger.logAdsSdkInitTimeoutInit(activity, timeoutMs)
             initialized = true
             initDeferred.complete(OzAdsResult.Success(Unit))
             return OzAdsResult.Success(Unit)
@@ -336,6 +336,8 @@ class OzAdsManager private constructor(
     }
 
     fun isAdInitialized(): Boolean = initialized
+
+    fun isInitStarted(): Boolean = initStarted
 
     /**
      * Suspend until [init] completes, or until [INIT_TIMEOUT_MS] elapses — whichever comes first.
@@ -364,7 +366,7 @@ class OzAdsManager private constructor(
             // Mark as initialized so subsequent init() calls are not blocked, then proceed.
             // Adapters that finish later will still serve ads on their next fill opportunity.
             OzLog.w("OzAdsManager", "SDK init timeout after ${timeoutMs}ms — proceeding to load ads. Init continues in background.")
-            context?.let { OzEventLogger.logAdsSdkInitTimeout(it, timeoutMs) }
+            context?.let { OzEventLogger.logAdsSdkInitTimeoutAwait(it, timeoutMs) }
             initialized = true
         }
         return OzAdsResult.Success(Unit)

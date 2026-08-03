@@ -95,12 +95,34 @@ object OzEventLogger {
         logSimpleEvent(context, "ads_sdk_init_exception", params)
     }
 
-    fun logAdsSdkInitTimeout(context: Context, timeoutMs: Long, sdkType: String = "AdMob") {
+    /**
+     * SDK init exceeded budget from within init(). Indicates MobileAds.initialize() was genuinely slow.
+     */
+    fun logAdsSdkInitTimeoutInit(context: Context, timeoutMs: Long, sdkType: String = "AdMob") {
         val params = Bundle().apply {
             putLong("timeout_ms", timeoutMs)
             putString("sdk_type", sdkType)
         }
-        logSimpleEvent(context, "ads_sdk_init_timeout", params)
+        logSimpleEvent(context, "ads_sdk_init_timeout_init", params)
+    }
+
+    /**
+     * awaitInitialization() timed out waiting for init to finish.
+     * Includes init_started flag to distinguish whether loadAd() ran before init() started,
+     * or init() started but took longer than budget.
+     */
+    fun logAdsSdkInitTimeoutAwait(context: Context, timeoutMs: Long, sdkType: String = "AdMob") {
+        val params = Bundle().apply {
+            putLong("timeout_ms", timeoutMs)
+            putString("sdk_type", sdkType)
+            putBoolean("init_started", com.oz.android.OzAdsManager.getInstance().isInitStarted())
+        }
+        logSimpleEvent(context, "ads_sdk_init_timeout_await", params)
+    }
+
+    @Deprecated("Replaced by logAdsSdkInitTimeoutInit and logAdsSdkInitTimeoutAwait to separate root causes.")
+    fun logAdsSdkInitTimeout(context: Context, timeoutMs: Long, sdkType: String = "AdMob") {
+        logAdsSdkInitTimeoutInit(context, timeoutMs, sdkType)
     }
 
     // --- Ad Flow & Lifecycle Events ---
