@@ -25,17 +25,24 @@ fun getPublishProperty(name: String, defaultValue: String = ""): String {
 android {
     namespace = "com.oz.android.ads_core"
     compileSdk {
-        version = release(36)
+        version = release(37)
     }
 
     defaultConfig {
         minSdk = 24
-        targetSdk = 36
 
         buildConfigField("String", "LIB_VERSION", "\"${getPublishProperty("PUBLISH_VERSION", "1.0.4")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+    }
+
+    lint {
+        targetSdk = 37
+    }
+
+    testOptions {
+        targetSdk = 37
     }
 
     buildTypes {
