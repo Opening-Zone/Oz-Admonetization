@@ -194,103 +194,100 @@ Concrete classes connect specific ad networks to the business logic layer.
 ```kotlin
 class OzAdmobBannerAd(context: Context) : InlineAds<AdmobBanner>(context) {
     
+    private var currentAdUnitId: String = ""
     private var collapsiblePosition: String? = null
     
     override fun createAd(key: String): AdmobBanner? {
-        val adUnitId = getAdUnitId(key) ?: return null
+        val adUnitId = currentAdUnitId.takeIf { it.isNotBlank() } ?: return null
         
-        return AdmobBanner(context, adUnitId, object : OzAdListener<AdmobBanner>() {
+        val bannerListener = object : OzAdListener<AdmobBanner>() {
             override fun onAdLoaded(ad: AdmobBanner) {
-                this@OzAdmobBannerAd.onAdLoaded(key, ad)
+                if (getAdState(key) == AdState.LOADING) {
+                    this@OzAdmobBannerAd.onAdLoaded(key, ad)
+                }
             }
             
-            override fun onAdFailedToLoad(error: LoadAdError) {
+            override fun onAdFailedToLoad(error: OzAdError) {
                 this@OzAdmobBannerAd.onAdLoadFailed(key, error.message)
             }
-        }).apply {
-            // Apply collapsible setting if configured
-            collapsiblePosition?.let { setCollapsible(it) }
+        }
+        
+        val mergedListener = bannerListener.merge(listener)
+        
+        // Dynamically instantiates Standard or Next-Gen implementation via Factory
+        return AdmobBanner.create(context, adUnitId, mergedListener).apply {
+            setCollapsible(collapsiblePosition)
         }
     }
     
     override fun onLoadAd(key: String, ad: AdmobBanner) {
-        // Calculate dynamic size based on container width
-        val adWidth = measuredWidth.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
-        ad.setAdSize(adWidth)
-        ad.load()
+        ad.load(this)
     }
     
     override fun onShowAds(key: String, ad: AdmobBanner) {
-        // Add ad view to this ViewGroup
-        removeAllViews()
         ad.show(this)
+        onAdShown(key)
     }
     
-    override fun onDestroyAd(key: String, ad: AdmobBanner) {
+    override fun destroyAd(ad: AdmobBanner) {
+        ad.detachFromParent()
         ad.destroy()
-    }
-    
-    // Public API
-    fun setCollapsibleTop() {
-        collapsiblePosition = "top"
-    }
-    
-    fun setCollapsibleBottom() {
-        collapsiblePosition = "bottom"
     }
 }
 ```
 
 ### Layer 4: Network Layer
 
-Thin wrapper around the ad network SDK (e.g., AdMob).
+Instead of tightly coupling view wrappers to concrete classes, the network layer defines **unified contracts (interfaces)** for each ad format. These contracts are dynamically resolved to their Standard GMS SDK or Next-Gen GMA SDK implementations at runtime using the **Factory Pattern** (via companion objects).
 
-**Example**: `AdmobBanner`
+#### Structure Diagram
+```mermaid
+classDiagram
+    class AdmobBanner {
+        <<interface>>
+        +load()
+        +show(container)
+        +destroy()
+        +create(...) AdmobBanner$
+    }
+    class AdmobStandardBanner {
+        -adView: AdView
+        +load()
+        +show(container)
+        +destroy()
+    }
+    class AdmobNextBanner {
+        -adView: NextGenAdView
+        +load()
+        +show(container)
+        +destroy()
+    }
+    AdmobBanner <|.. AdmobStandardBanner : implements
+    AdmobBanner <|.. AdmobNextBanner : implements
+```
+
+**Example**: `AdmobBanner` contract with dynamic factory initialization:
 
 ```kotlin
-class AdmobBanner(
-    private val context: Context,
-    private val adUnitId: String,
-    private val listener: OzAdListener<AdmobBanner>
-) {
-    private var adView: AdView? = null
-    private var adSize: AdSize? = null
-    
-    fun setAdSize(widthPx: Int) {
-        val widthDp = (widthPx / context.resources.displayMetrics.density).toInt()
-        adSize = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, widthDp)
-    }
-    
-    fun setCollapsible(position: String) {
-        // Configure collapsible banner
-    }
-    
-    fun load() {
-        adView = AdView(context).apply {
-            this.adUnitId = this@AdmobBanner.adUnitId
-            this.setAdSize(adSize ?: AdSize.BANNER)
-            
-            adListener = object : AdListener() {
-                override fun onAdLoaded() {
-                    listener.onAdLoaded(this@AdmobBanner)
-                }
-                
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    listener.onAdFailedToLoad(error)
-                }
+interface AdmobBanner {
+    val collapsiblePosition: String?
+    fun setCollapsible(position: String?)
+    fun load()
+    fun show(container: ViewGroup)
+    fun destroy()
+
+    companion object {
+        fun create(
+            context: Context,
+            adUnitId: String,
+            listener: OzAdListener<AdmobBanner>? = null
+        ): AdmobBanner {
+            return if (OzAdsManager.getInstance().config.adsCoreType == AdsCoreType.ADMOB_NEXT_GEN) {
+                AdmobNextBanner(context, adUnitId, listener)
+            } else {
+                AdmobStandardBanner(context, adUnitId, listener)
             }
-            
-            loadAd(AdRequest.Builder().build())
         }
-    }
-    
-    fun show(container: ViewGroup) {
-        adView?.let { container.addView(it) }
-    }
-    
-    fun destroy() {
-        adView?.destroy()
-        adView = null
     }
 }
 ```

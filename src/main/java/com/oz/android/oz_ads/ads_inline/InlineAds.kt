@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -83,6 +83,13 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
         stopShimmer()
     }
 
+    override fun onAdLoaded(key: String, ad: AdType) {
+        super.onAdLoaded(key, ad)
+        if (isVisible) {
+            scheduleNextRefresh()
+        }
+    }
+
     /**
      * Abstract method for implementations to set shimmer size based on ad configuration
      */
@@ -100,7 +107,7 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
             }
             super.loadAd()
         } ?: run {
-            Log.w(TAG, "No key set. Init the ads with key and id first")
+            OzLog.w(TAG, "No key set. Init the ads with key and id first")
         }
     }
 
@@ -110,7 +117,7 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
      */
     fun setRefreshTime(timeInMillis: Long) {
         if (timeInMillis <= 0) {
-            Log.w(TAG, "Refresh time must be greater than 0")
+            OzLog.w(TAG, "Refresh time must be greater than 0")
             return
         }
         refreshTime = timeInMillis
@@ -134,8 +141,8 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
      * @param key Key of the ad that failed to load
      * @param message Failure message
      */
-    override fun onAdLoadFailed(key: String, message: String?) {
-        super.onAdLoadFailed(key, message)
+    override fun onAdLoadFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdLoadFailed(key, message, errorCode)
         stopShimmer()
 
         if (isVisible) {
@@ -165,7 +172,7 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
      * Refresh ad (reload a new ad)
      */
     fun refreshAd() {
-        Log.d(TAG, "Refreshing ad...")
+        OzLog.d(TAG, "Refreshing ad...")
         adKey?.let {
             loadThenShow()
         }
@@ -301,13 +308,27 @@ abstract class InlineAds<AdType> @JvmOverloads constructor(
         }
     }
 
-    fun startShimmer(){
-        shimmerLayout?.visibility = VISIBLE
-        shimmerLayout?.startShimmer()
+    fun startShimmer() {
+        val action = Runnable {
+            shimmerLayout?.visibility = VISIBLE
+            shimmerLayout?.startShimmer()
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action.run()
+        } else {
+            refreshHandler.post(action)
+        }
     }
 
-    fun stopShimmer(){
-        shimmerLayout?.stopShimmer()
-        shimmerLayout?.visibility = GONE
+    fun stopShimmer() {
+        val action = Runnable {
+            shimmerLayout?.stopShimmer()
+            shimmerLayout?.visibility = GONE
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action.run()
+        } else {
+            refreshHandler.post(action)
+        }
     }
 }

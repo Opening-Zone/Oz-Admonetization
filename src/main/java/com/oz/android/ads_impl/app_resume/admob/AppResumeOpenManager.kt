@@ -3,18 +3,20 @@ package com.oz.android.ads_impl.app_resume.admob
 import android.app.Activity
 import android.content.Context
 import com.oz.android.utils.OzLog
-import com.oz.android.ads_core.admobs.interstitial.AdmobInterstitial
+import com.oz.android.ads_core.admobs.app_open.AdmobAppOpen
 import com.oz.android.ads_impl.app_resume.AppLifecycleAdManager
 import com.oz.android.utils.listener.OzAdError
 import com.oz.android.utils.listener.OzAdListener
-import com.oz.android.oz_ads.ads_overlay.admob.OzAdmobIntersAd
+import com.oz.android.oz_ads.ads_overlay.admob.OzAdmobOpenAd
 import com.oz.android.OzAdsManager
 import com.oz.android.utils.OzLoadingDialog
 
 /**
- * App Resume Ads Manager using Interstitial Ads
+ * App Resume Ads Manager using App Open Ads
  *
- * Shows interstitial ads when the app returns from background to foreground.
+ * Shows App Open ads when the app returns from background to foreground.
+ * This is the **recommended** implementation for app resume ads — App Open ads are
+ * optimised for the resume use-case and generally produce higher revenue.
  *
  * Usage:
  * ```kotlin
@@ -23,44 +25,48 @@ import com.oz.android.utils.OzLoadingDialog
  *     override fun onCreate() {
  *         super.onCreate()
  *
- *         val resumeAdsManager = AppResumeInterstitialManager.getInstance()
- *         resumeAdsManager.init(this)
- *         resumeAdsManager.setAdUnitId("ca-app-pub-xxxxx")
+ *         val resumeManager = AppResumeOpenManager.getInstance()
+ *         resumeManager.init(this)
+ *         resumeManager.setAdUnitId("ca-app-pub-xxxxx")
  *
  *         // Optional: Configure
- *         resumeAdsManager.setSplashActivity(SplashActivity::class.java)
- *         resumeAdsManager.disableAppResumeWithActivity(PaymentActivity::class.java)
+ *         resumeManager.setSplashActivity(SplashActivity::class.java)
+ *         resumeManager.disableAppResumeWithActivity(PaymentActivity::class.java)
  *     }
  * }
  * ```
+ *
+ * Quick-switch tip:
+ * To toggle between App Open and Interstitial resume ads at the call site, keep both
+ * managers initialised and flip which one has [isAppResumeEnabled] set to `true`.
  */
-class AppResumeInterstitialManager private constructor() :
-    AppLifecycleAdManager<AdmobInterstitial>() {
+class AppResumeOpenManager private constructor() :
+    AppLifecycleAdManager<AdmobAppOpen>() {
 
     private var adUnitId: String? = null
-    private var adListener: OzAdListener<AdmobInterstitial>? = null
+    private var adListener: OzAdListener<AdmobAppOpen>? = null
 
-    private var interstitialAd: OzAdmobIntersAd? = null
+    private var openAd: OzAdmobOpenAd? = null
 
     companion object {
-        private const val TAG = "AppResumeInterstitial"
+        private const val TAG = "AppResumeOpen"
 
         @Volatile
-        private var instance: AppResumeInterstitialManager? = null
+        private var instance: AppResumeOpenManager? = null
 
         /**
-         * Get singleton instance of AppResumeInterstitialManager
+         * Get singleton instance of AppResumeOpenManager
          */
-        fun getInstance(): AppResumeInterstitialManager {
+        fun getInstance(): AppResumeOpenManager {
             return instance ?: synchronized(this) {
-                instance ?: AppResumeInterstitialManager().also { instance = it }
+                instance ?: AppResumeOpenManager().also { instance = it }
             }
         }
     }
 
     /**
-     * Set the Ad Unit ID for interstitial ads
-     * Must be called before showing ads
+     * Set the Ad Unit ID for App Open ads.
+     * Must be called before showing ads.
      */
     fun setAdUnitId(adUnitId: String) {
         this.adUnitId = adUnitId
@@ -68,18 +74,18 @@ class AppResumeInterstitialManager private constructor() :
     }
 
     /**
-     * Set custom ad listener for additional callbacks
+     * Set custom ad listener for additional callbacks.
      */
-    fun setAdListener(listener: OzAdListener<AdmobInterstitial>) {
+    fun setAdListener(listener: OzAdListener<AdmobAppOpen>) {
         this.adListener = listener
     }
 
     /**
-     * Load interstitial ad
+     * Load App Open ad
      */
     override fun loadAd(context: Context) {
         if (!adUnitId.isNullOrBlank()) {
-            interstitialAd = OzAdmobIntersAd(context).apply {
+            openAd = OzAdmobOpenAd(context).apply {
                 setAdUnitId(TAG, adUnitId!!)
                 listener = createAdListener()
                 loadAd(true)
@@ -88,7 +94,7 @@ class AppResumeInterstitialManager private constructor() :
     }
 
     /**
-     * Show interstitial ad
+     * Show App Open ad
      */
     override fun showAd(activity: Activity, onShowComplete: () -> Unit) {
         if (OzAdsManager.getInstance().isFullScreenAdShowing.value || OzLoadingDialog.isShowing()) {
@@ -98,51 +104,51 @@ class AppResumeInterstitialManager private constructor() :
         }
 
         if (isAdReady()) {
-            interstitialAd?.show(activity)
+            openAd?.show(activity)
         } else {
             OzLog.d(TAG, "Ad is not ready or expired. Calling loadThenShow to reload and show.")
-            interstitialAd?.loadThenShow(activity, showOverlay = true)
+            openAd?.loadThenShow(activity)
         }
         onShowComplete()
     }
 
     /**
-     * Create ad listener for load callbacks
+     * Create ad listener for load/show callbacks
      */
-    private fun createAdListener(): OzAdListener<AdmobInterstitial> {
-        return object : OzAdListener<AdmobInterstitial>() {
-            override fun onAdLoaded(ad: AdmobInterstitial) {
-                OzLog.d(TAG, "Interstitial ad loaded successfully")
+    private fun createAdListener(): OzAdListener<AdmobAppOpen> {
+        return object : OzAdListener<AdmobAppOpen>() {
+            override fun onAdLoaded(ad: AdmobAppOpen) {
+                OzLog.d(TAG, "App Open ad loaded successfully")
                 onAdLoadedSuccess(ad)
                 adListener?.onAdLoaded(ad)
             }
 
             override fun onAdFailedToLoad(error: OzAdError) {
-                OzLog.e(TAG, "Failed to load interstitial: ${error.message}")
+                OzLog.e(TAG, "Failed to load App Open ad: ${error.message}")
                 currentAd = null
                 adListener?.onAdFailedToLoad(error)
             }
 
             override fun onAdClicked() {
-                OzLog.d(TAG, "Interstitial ad clicked - disabling next resume ad")
+                OzLog.d(TAG, "App Open ad clicked - disabling next resume ad")
                 disableAdResumeByClickAction()
                 adListener?.onAdClicked()
             }
 
             override fun onAdDismissedFullScreenContent() {
-                OzLog.d(TAG, "Interstitial ad dismissed")
+                OzLog.d(TAG, "App Open ad dismissed")
                 adListener?.onAdDismissedFullScreenContent()
             }
 
             override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
-                OzLog.e(TAG, "Failed to show interstitial: ${adError.message}")
+                OzLog.e(TAG, "Failed to show App Open ad: ${adError.message}")
                 adListener?.onAdFailedToShowFullScreenContent(adError)
             }
         }
     }
 
     /**
-     * Check if interstitial ad is ready to show
+     * Check if App Open ad is ready to show
      */
     fun isAdReady(): Boolean {
         return currentAd?.isAdLoaded() == true
@@ -162,4 +168,3 @@ class AppResumeInterstitialManager private constructor() :
         }
     }
 }
-

@@ -3,7 +3,7 @@ package com.oz.android.oz_ads.ads_overlay.admob
 import android.app.Activity
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
+import com.oz.android.utils.OzLog
 import com.oz.android.utils.listener.OzAdListener
 import com.oz.android.ads_core.admobs.interstitial.AdmobInterstitial
 import com.oz.android.oz_ads.ads_overlay.OverlayAds
@@ -27,6 +27,9 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : OverlayAds<AdmobInterstitial>(context, attrs, defStyleAttr) {
 
+    override val adFormat: String = "interstitial"
+    override fun getAdUnitId(key: String): String? = currentAdUnitId
+
     companion object {
         private const val TAG = "OzAdmobIntersAd"
     }
@@ -43,7 +46,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
     fun setAdUnitId(key: String, adUnitId: String) {
         setPreloadKey(key)
         this.currentAdUnitId = adUnitId
-        Log.d(TAG, "Ad unit ID set for key: $key -> $adUnitId")
+        OzLog.d(TAG, "Ad unit ID set for key: $key -> $adUnitId")
     }
 
     /**
@@ -53,7 +56,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
      */
     fun setActivity(key: String, activity: Activity) {
         this.currentActivity = activity
-        Log.d(TAG, "Activity set for key: $key")
+        OzLog.d(TAG, "Activity set for key: $key")
     }
 
     /**
@@ -65,7 +68,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
         adKey?.let { key ->
             setActivity(key, activity)
             showAds(key)
-        } ?: Log.w(TAG, "show() called but no adKey is set. Use setAdUnitId() first.")
+        } ?: OzLog.w(TAG, "show() called but no adKey is set. Use setAdUnitId() first.")
     }
 
     /**
@@ -87,7 +90,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
                 }
             }
             loadThenShow()
-        } ?: Log.w(TAG, "loadThenShow() called but no adKey is set. Use setAdUnitId() first.")
+        } ?: OzLog.w(TAG, "loadThenShow() called but no adKey is set. Use setAdUnitId() first.")
     }
 
     /**
@@ -98,7 +101,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
         val adUnitId = currentAdUnitId
 
         if (adUnitId.isNullOrBlank()) {
-            Log.e(TAG, "Ad unit ID is not set for key: $key")
+            OzLog.e(TAG, "Ad unit ID is not set for key: $key")
             onAdLoadFailed(key, "Ad unit ID not set")
             return null
         }
@@ -114,7 +117,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
             override fun onAdFailedToLoad(error: OzAdError) {
                 OzLoadingDialog.hideFullScreenLoadingDialog()
                 // Bridge to OzAds.onAdLoadFailed() - handles state management
-                this@OzAdmobIntersAd.onAdLoadFailed(key, error.message)
+                this@OzAdmobIntersAd.onAdLoadFailed(key, error.message, error.code)
             }
 
             override fun onAdShowedFullScreenContent() {
@@ -129,7 +132,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
 
             override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
                 // Bridge to OzAds.onAdShowFailed() - handles state management
-                this@OzAdmobIntersAd.onAdShowFailed(key, adError.message)
+                this@OzAdmobIntersAd.onAdShowFailed(key, adError.message, adError.code)
             }
 
             override fun onAdClicked() {
@@ -140,7 +143,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
 
         val mergedListener = intersListener.merge(listener)
 
-        return AdmobInterstitial(context, adUnitId, mergedListener)
+        return AdmobInterstitial.create(context, adUnitId, mergedListener)
     }
 
     /**
@@ -148,7 +151,7 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
      * Only implements the network-specific load call, no business logic.
      */
     override fun onLoadAd(key: String, ad: AdmobInterstitial) {
-        Log.d(TAG, "Loading interstitial ad for key: $key")
+        OzLog.d(TAG, "Loading interstitial ad for key: $key")
         ad.load()
     }
 
@@ -161,12 +164,12 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
         OzLoadingDialog.hideFullScreenLoadingDialog()
         val activity = currentActivity
         if (activity == null) {
-            Log.e(TAG, "Cannot show interstitial ad for key '$key' because activity is null. Call setActivity() first.")
+            OzLog.e(TAG, "Cannot show interstitial ad for key '$key' because activity is null. Call setActivity() first.")
             onAdShowFailed(key, "Activity is null")
             return
         }
 
-        Log.d(TAG, "Showing interstitial ad for key: $key")
+        OzLog.d(TAG, "Showing interstitial ad for key: $key")
         ad.show(activity)
     }
 
@@ -175,34 +178,36 @@ open class OzAdmobIntersAd @JvmOverloads constructor(
      * Only implements the network-specific cleanup, no business logic.
      */
     override fun destroyAd(ad: AdmobInterstitial) {
-        Log.d(TAG, "Destroying interstitial ad")
+        OzLog.d(TAG, "Destroying interstitial ad")
         // Interstitial ads are one-time use objects.
     }
 
-    /**
-     * Override onAdDismissed to clean up activity reference
-     */
+    override fun isValid(ad: AdmobInterstitial): Boolean {
+        return ad.isAdLoaded()
+    }
+
+    override fun onAdShowBlocked(key: String, reason: String?) {
+        super.onAdShowBlocked(key, reason)
+        currentActivity = null
+        listener?.onNextAction()
+        OzLog.d(TAG, "Cleaned up activity reference for key: $key after show blocked")
+    }
+
     override fun onAdDismissed(key: String) {
         super.onAdDismissed(key)
         currentActivity = null
-        Log.d(TAG, "Cleaned up activity reference for key: $key")
+        OzLog.d(TAG, "Cleaned up activity reference for key: $key")
     }
 
-    /**
-     * Override onAdLoadFailed to notify error callback
-     */
-    override fun onAdLoadFailed(key: String, message: String?) {
-        super.onAdLoadFailed(key, message)
+    override fun onAdLoadFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdLoadFailed(key, message, errorCode)
     }
 
-    /**
-     * Override onAdShowFailed to clean up activity reference and notify error callback
-     */
-    override fun onAdShowFailed(key: String, message: String?) {
-        super.onAdShowFailed(key, message)
+    override fun onAdShowFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdShowFailed(key, message, errorCode)
         currentActivity = null
         listener?.onNextAction()
-        Log.d(TAG, "Cleaned up activity reference for key: $key after show failed")
+        OzLog.d(TAG, "Cleaned up activity reference for key: $key after show failed")
     }
 
     /**

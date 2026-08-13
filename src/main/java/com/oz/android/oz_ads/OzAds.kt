@@ -2,13 +2,16 @@ package com.oz.android.oz_ads
 
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
 import android.view.ViewGroup
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.oz.android.utils.enums.AdState
 import com.oz.android.utils.listener.OzAdListener
 import com.oz.android.OzAdsManager
+import com.oz.android.utils.event.OzEventLogger
+import com.oz.android.utils.OzLog
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -35,8 +38,15 @@ abstract class OzAds<AdType> : ViewGroup {
     // The single key managed by this view instance
     protected var adKey: String? = null
 
+    // Coroutine job for the SDK-init retry queue — cancelled on destroy to prevent stale loads
+    private var initRetryJob: Job? = null
+
     //listener
     var listener: OzAdListener<AdType>? = null
+
+    // Abstract/open properties to be provided by concrete format implementations
+    open val adFormat: String? = null
+    open fun getAdUnitId(key: String): String? = null
 
     /**
      * Implementation of isAdEnable() from the interface
@@ -53,7 +63,7 @@ abstract class OzAds<AdType> : ViewGroup {
      */
     fun setPreloadKey(key: String) {
         this.adKey = key
-        Log.d(TAG, "Ad key set to: $key")
+        OzLog.d(TAG, "Ad key set to: $key")
         // Set state to IDLE if not already present
         OzAdsManager.getInstance().putAdStateIfAbsent(key, AdState.IDLE)
     }
@@ -74,12 +84,41 @@ abstract class OzAds<AdType> : ViewGroup {
     open fun loadAd() {
         val key = adKey
         if (key == null) {
-            Log.w(TAG, "Ad key not set. Call setPreloadKey() first.")
+            OzLog.w(TAG, "Ad key not set. Call setPreloadKey() first.")
             return
         }
 
+        OzEventLogger.logAdLoadAttempt(context, adUnitId = getAdUnitId(key), adFormat = adFormat, key = key)
+
         if (!isAdEnable()) {
-            Log.d(TAG, "Should not show ad, skipping showAds() for key: $key")
+            OzLog.d(TAG, "Should not show ad, skipping showAds() for key: $key")
+            OzEventLogger.logAdSkip(context, adUnitId = getAdUnitId(key), adFormat = adFormat, reason = "ad_disabled", key = key)
+            return
+        }
+
+        if (!OzAdsManager.getInstance().canRequestAds()) {
+            OzLog.w(TAG, "Consent not granted. Cannot load ad for key: $key")
+            OzEventLogger.logAdSkip(context, adUnitId = getAdUnitId(key), adFormat = adFormat, reason = "consent_not_granted", key = key)
+            return
+        }
+
+        if (!OzAdsManager.getInstance().isAdInitialized()) {
+            OzLog.w(TAG, "OzAdsManager is not initialized — queueing load for key: $key")
+            OzEventLogger.logAdSkip(context, adUnitId = getAdUnitId(key), adFormat = adFormat, reason = "sdk_not_initialized", key = key)
+
+            val scope = findViewTreeLifecycleOwner()?.lifecycleScope ?: ProcessLifecycleOwner.get().lifecycleScope
+            initRetryJob?.cancel()
+            initRetryJob = scope.launch {
+                OzAdsManager.getInstance().awaitInitialization(context)
+                if (OzAdsManager.getInstance().isAdInitialized() && adKey == key) {
+                    val state = getAdState(key)
+                    if (state == AdState.IDLE) {
+                        OzLog.d(TAG, "SDK initialized, retrying queued load for key: $key")
+                        loadAd()
+                    }
+                }
+                initRetryJob = null
+            }
             return
         }
 
@@ -87,11 +126,11 @@ abstract class OzAds<AdType> : ViewGroup {
 
         when (currentState) {
             AdState.IDLE, AdState.SHOWING -> {
-                if (currentState == AdState.IDLE) Log.d(
+                if (currentState == AdState.IDLE) OzLog.d(
                     TAG,
                     "Loading ad for key: $key (state: IDLE)"
                 )
-                else Log.d(TAG, "Ad is showing for key: $key, loading a new one")
+                else OzLog.d(TAG, "Ad is showing for key: $key, loading a new one")
 
                 setAdState(key, AdState.LOADING)
                 val ad = createAd(key)
@@ -99,16 +138,48 @@ abstract class OzAds<AdType> : ViewGroup {
                     onAdLoadFailed(key, "Failed to create ad object.")
                     return
                 }
+                OzEventLogger.logAdRequest(context, getAdUnitId(key), adFormat, key)
                 onLoadAd(key, ad)
             }
 
             AdState.LOADING -> {
-                Log.d(TAG, "Ad already loading for key: $key")
+                OzLog.d(TAG, "Ad already loading for key: $key")
                 return
             }
 
             AdState.LOADED -> {
-                Log.d(TAG, "Ad already loaded for key: $key")
+                val existing: AdType? = OzAdsManager.getInstance().getAd(key)
+                when {
+                    existing == null -> {
+                        // State is LOADED but nothing is in the store — stale state, reload.
+                        OzLog.w(TAG, "Ad state is LOADED but store is empty for key: $key. Reloading.")
+                        OzAdsManager.getInstance().logAdEvent("ad_expired", key, "state_loaded_store_empty")
+                        OzEventLogger.logAdExpired(context, getAdUnitId(key), adFormat, "state_loaded_store_empty", key)
+                        setAdState(key, AdState.LOADING)
+                        val ad = createAd(key)
+                        if (ad == null) {
+                            onAdLoadFailed(key, "Failed to create ad object.")
+                            return
+                        }
+                        OzEventLogger.logAdRequest(context, getAdUnitId(key), adFormat, key)
+                        onLoadAd(key, ad)
+                    }
+                    !isValid(existing) -> {
+                        OzLog.d(TAG, "Ad for key: $key is expired/invalid. Reloading.")
+                        OzAdsManager.getInstance().logAdEvent("ad_expired", key, "at_load_time")
+                        OzEventLogger.logAdExpired(context, getAdUnitId(key), adFormat, "at_load_time", key)
+                        onDestroyAd(key)
+                        setAdState(key, AdState.LOADING)
+                        val ad = createAd(key)
+                        if (ad == null) {
+                            onAdLoadFailed(key, "Failed to create ad object.")
+                            return
+                        }
+                        OzEventLogger.logAdRequest(context, getAdUnitId(key), adFormat, key)
+                        onLoadAd(key, ad)
+                    }
+                    else -> OzLog.d(TAG, "Ad already loaded for key: $key")
+                }
                 return
             }
         }
@@ -124,7 +195,7 @@ abstract class OzAds<AdType> : ViewGroup {
 
     open fun loadThenShow() {
         // Ensure adKey is not null before calling
-        adKey?.let { loadThenShow(it) } ?: Log.e(TAG, "loadThenShow called but adKey is null")
+        adKey?.let { loadThenShow(it) } ?: OzLog.e(TAG, "loadThenShow called but adKey is null")
     }
 
     /**
@@ -133,16 +204,22 @@ abstract class OzAds<AdType> : ViewGroup {
      */
     open fun showAds(key: String) {
         if (this.adKey == null) {
-            Log.d(TAG, "Ad key not set, setting it to '$key' from showAds.")
+            OzLog.d(TAG, "Ad key not set, setting it to '$key' from showAds.")
             setPreloadKey(key)
         } else if (this.adKey != key) {
-            Log.e(TAG, "Cannot show ad for key '$key', this view is already managing key '${this.adKey}'.")
+            OzLog.e(TAG, "Cannot show ad for key '$key', this view is already managing key '${this.adKey}'.")
             return
         }
 
         if (!isAdEnable()) {
-            Log.d(TAG, "Should not show ad, skipping showAds() for key: $key")
+            OzLog.d(TAG, "Should not show ad, skipping showAds() for key: $key")
             setAdState(key, AdState.IDLE)
+            return
+        }
+
+        if (!OzAdsManager.getInstance().isAdInitialized()) {
+            OzLog.w(TAG, "OzAdsManager is not initialized. Cannot show ad for key: $key")
+            onAdShowFailed(key, "OzAdsManager is not initialized")
             return
         }
 
@@ -150,34 +227,50 @@ abstract class OzAds<AdType> : ViewGroup {
 
         when (currentState) {
             AdState.IDLE -> {
-                onAdShowFailed(key, "Ad is not loaded, or not loading.")
+                val ad: AdType? = OzAdsManager.getInstance().getAd(key)
+                if (ad != null && isValid(ad)) {
+                    OzLog.d(TAG, "Ad state is IDLE but valid ad found in store. Recovering to SHOWING.")
+                    setAdState(key, AdState.SHOWING)
+                    OzEventLogger.logAdShowCalled(context, getAdUnitId(key), adFormat, key)
+                    onShowAds(key, ad)
+                } else {
+                    onAdShowFailed(key, "Ad is not loaded, or not loading.")
+                }
             }
 
             AdState.LOADING -> {
-                Log.d(TAG, "Ad loading for key: $key, setting pending show")
+                OzLog.d(TAG, "Ad loading for key: $key, setting pending show")
                 // Store the logic to run once loaded
                 OzAdsManager.getInstance().setPendingShow(key) {
-                    val ad: AdType? = OzAdsManager.getInstance().getAd(key)
-                    if (ad != null) {
-                        setAdState(key, AdState.SHOWING)
-                        onShowAds(key, ad)
-                    } else {
-                        onAdShowFailed(key, "Ad disappeared after loading.")
-                    }
+                    showAds(key)
+                }
+                // Close race window: if the ad completed loading while setting the pending show, trigger it.
+                if (getAdState(key) == AdState.LOADED) {
+                    OzAdsManager.getInstance().executePendingShow(key)
                 }
             }
 
             AdState.SHOWING -> {
-                Log.d(TAG, "Ad already showing for key: $key")
+                OzLog.d(TAG, "Ad already showing for key: $key")
                 return
             }
 
             AdState.LOADED -> {
-                Log.d(TAG, "Showing ad for key: $key (state: LOADED)")
+                OzLog.d(TAG, "Showing ad for key: $key (state: LOADED)")
                 val ad: AdType? = OzAdsManager.getInstance().getAd(key)
                 if (ad != null) {
-                    setAdState(key, AdState.SHOWING)
-                    onShowAds(key, ad)
+                    if (isValid(ad)) {
+                        setAdState(key, AdState.SHOWING)
+                        OzEventLogger.logAdShowCalled(context, getAdUnitId(key), adFormat, key)
+                        onShowAds(key, ad)
+                    } else {
+                        OzLog.w(TAG, "Ad found in store is expired/invalid for key: $key")
+                        OzAdsManager.getInstance().logAdEvent("ad_expired", key, "at_show_time")
+                        OzEventLogger.logAdExpired(context, getAdUnitId(key), adFormat, "at_show_time", key)
+                        onDestroyAd(key)
+                        setAdState(key, AdState.IDLE)
+                        onAdShowFailed(key, "Ad expired or invalid")
+                    }
                 } else {
                     onAdShowFailed(key, "Ad object not found in store.")
                 }
@@ -227,7 +320,8 @@ abstract class OzAds<AdType> : ViewGroup {
 
             OzAdsManager.getInstance().setAd(key, ad as Any)
             setAdState(key, AdState.LOADED)
-            Log.d(TAG, "Ad loaded successfully for key: $key")
+            OzLog.d(TAG, "Ad loaded successfully for key: $key")
+            OzEventLogger.logAdLoadSuccess(context, getAdUnitId(key), adFormat, key)
 
             // Check if there's a pending show globally for this key
             OzAdsManager.getInstance().executePendingShow(key)
@@ -242,13 +336,16 @@ abstract class OzAds<AdType> : ViewGroup {
      * Implementations should call this method after a failed ad load
      * @param key Key of the ad that failed to load
      * @param message Failure message
+     * @param errorCode Error code from ad network
      */
-    protected open fun onAdLoadFailed(key: String, message: String? = null) {
-        Log.e(TAG, "Ad load failed for key: $key. Reason: ${message ?: "Unknown"}")
+    protected open fun onAdLoadFailed(key: String, message: String? = null, errorCode: Int? = null) {
+        OzLog.e(TAG, "Ad load failed for key: $key. Reason: ${message ?: "Unknown"}")
         setAdState(key, AdState.IDLE)
 
         // Clear pending show since load failed
         OzAdsManager.getInstance().clearPendingShow(key)
+        OzAdsManager.getInstance().logAdEvent("ad_load_failed", key, message)
+        OzEventLogger.logAdLoadFailed(context, getAdUnitId(key), adFormat, errorCode, message, key)
     }
 
     /**
@@ -257,8 +354,9 @@ abstract class OzAds<AdType> : ViewGroup {
      * @param key Key of the successfully shown ad
      */
     protected open fun onAdShown(key: String) {
-        Log.d(TAG, "Ad shown successfully for key: $key")
+        OzLog.d(TAG, "Ad shown successfully for key: $key")
         // State was already set to SHOWING in showAds()
+        OzAdsManager.getInstance().logAdEvent("ad_shown", key)
     }
 
     /**
@@ -269,7 +367,8 @@ abstract class OzAds<AdType> : ViewGroup {
     protected open fun onAdDismissed(key: String) {
         if (adKey != key) return
 
-        Log.d(TAG, "Ad dismissed for key: $key, cleaning up")
+        OzLog.d(TAG, "Ad dismissed for key: $key, cleaning up")
+        OzEventLogger.logAdDismissed(context, getAdUnitId(key), adFormat, key)
 
         // Destroy ad to prevent memory leak
         onDestroyAd(key)
@@ -283,11 +382,34 @@ abstract class OzAds<AdType> : ViewGroup {
      * Implementations should call this method after a failed ad show
      * @param key Key of the ad that failed to show
      * @param message Failure message
+     * @param errorCode Error code from ad network
      */
-    protected open fun onAdShowFailed(key: String, message: String? = null) {
+    protected open fun onAdShowFailed(key: String, message: String? = null, errorCode: Int? = null) {
         if (adKey != key) return
-        Log.e(TAG, "Ad show failed for key: $key. Reason: ${message ?: "Unknown"}")
+        OzLog.e(TAG, "Ad show failed for key: $key. Reason: ${message ?: "Unknown"}")
+        onDestroyAd(key)
         setAdState(key, AdState.IDLE)
+        OzAdsManager.getInstance().clearPendingShow(key)
+        OzAdsManager.getInstance().logAdEvent("ad_show_failed", key, message)
+        OzEventLogger.logAdShowFailed(context, getAdUnitId(key), adFormat, errorCode, message, key)
+    }
+
+    /**
+     * Called when an ad show is blocked (e.g. by cooldown or another ad showing)
+     * Keeps the state as LOADED and does not destroy the ad.
+     */
+    protected open fun onAdShowBlocked(key: String, reason: String? = null) {
+        if (adKey != key) return
+        OzLog.w(TAG, "Ad show blocked for key: $key. Reason: ${reason ?: "Unknown"}")
+        OzAdsManager.getInstance().logAdEvent("ad_show_blocked", key, reason)
+        OzEventLogger.logAdSkip(context, getAdUnitId(key), adFormat, reason ?: "show_blocked", key)
+    }
+
+    /**
+     * Check if the loaded ad is valid/not expired.
+     */
+    protected open fun isValid(ad: AdType): Boolean {
+        return true
     }
 
     /**
@@ -295,7 +417,8 @@ abstract class OzAds<AdType> : ViewGroup {
      * @param key Key of the clicked ad
      */
     protected open fun onAdClicked(key: String) {
-        Log.d(TAG, "Ad clicked for key: $key")
+        OzLog.d(TAG, "Ad clicked for key: $key")
+        OzEventLogger.logAdClickedCustom(context, getAdUnitId(key), adFormat, key)
     }
 
     /**
@@ -305,7 +428,7 @@ abstract class OzAds<AdType> : ViewGroup {
      */
     private fun setAdState(key: String, state: AdState) {
         OzAdsManager.getInstance().setAdState(key, state)
-        Log.d(TAG, "Ad state changed for key: $key -> $state")
+        OzLog.d(TAG, "Ad state changed for key: $key -> $state")
     }
 
     /**
@@ -329,8 +452,10 @@ abstract class OzAds<AdType> : ViewGroup {
      * Destroy the ad managed by this view instance and clean up resources
      */
     open fun destroy() {
+        initRetryJob?.cancel()
+        initRetryJob = null
         adKey?.let { key ->
-            Log.d(TAG, "Destroying ad for view instance, key: $key")
+            OzLog.d(TAG, "Destroying ad for view instance, key: $key")
             onDestroyAd(key)
             setAdState(key, AdState.IDLE)
             OzAdsManager.getInstance().clearPendingShow(key) // remove pending show to avoid crash when show on destroyed view

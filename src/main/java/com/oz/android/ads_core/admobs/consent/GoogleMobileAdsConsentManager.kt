@@ -24,104 +24,152 @@ import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.FormError
 import com.google.android.ump.UserMessagingPlatform
+import com.oz.android.ads_core.BuildConfig
 import com.oz.android.ads_core.admobs.AdMobManager
+import com.oz.android.utils.event.OzEventLogger
 
 /**
- * The Google Mobile Ads SDK provides the User Messaging Platform (Google's IAB Certified consent
- * management platform) as one solution to capture consent for users in GDPR impacted countries.
- * This is an example and you can choose another consent management platform to capture consent.
+ * Manages User Messaging Platform (UMP) consent flows for Google Mobile Ads (GMA) SDK.
+ *
+ * Handles GDPR, CCPA, and regional user consent gathering, consent state updates,
+ * analytics tracking, and presentation of privacy option forms.
  */
 class GoogleMobileAdsConsentManager private constructor(context: Context) {
+
     private val consentInformation: ConsentInformation =
         UserMessagingPlatform.getConsentInformation(context)
 
-    /** Interface definition for a callback to be invoked when consent gathering is complete. */
+    /**
+     * Functional interface invoked when the consent gathering flow (info update + form display) completes.
+     */
     fun interface OnConsentGatheringCompleteListener {
+        /**
+         * Triggered when consent gathering is finished.
+         *
+         * @param error [FormError] if an error occurred during request or form presentation, or null if successful.
+         */
         fun consentGatheringComplete(error: FormError?)
     }
 
-    /** Helper variable to determine if the app can request ads. */
+    /**
+     * Indicates whether the current consent status allows sending ad requests.
+     *
+     * Delegates to [ConsentInformation.canRequestAds].
+     */
     val canRequestAds: Boolean
         get() = consentInformation.canRequestAds()
 
-    // [START is_privacy_options_required]
-    /** Helper variable to determine if the privacy options form is required. */
+    /**
+     * Indicates whether the user is required to have a privacy options entry point (e.g. Settings menu)
+     * based on their geographic region (e.g. EEA/UK).
+     */
     val isPrivacyOptionsRequired: Boolean
-        get() =
-            consentInformation.privacyOptionsRequirementStatus ==
-                    ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
-
-    // [END is_privacy_options_required]
+        get() = consentInformation.privacyOptionsRequirementStatus ==
+                ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
 
     /**
-     * Helper method to call the UMP SDK methods to request consent information and load/show a
-     * consent form if necessary.
+     * Initiates the full consent gathering pipeline:
+     * 1. Requests consent information updates from UMP SDK.
+     * 2. Shows the consent form if required by law/region.
+     * 3. Logs relevant consent events to [OzEventLogger].
+     * 4. Triggers [onConsentGatheringCompleteListener] upon completion.
+     *
+     * @param activity The current foreground [Activity].
+     * @param onConsentGatheringCompleteListener Callback fired when consent gathering completes.
      */
     fun gatherConsent(
         activity: Activity,
         onConsentGatheringCompleteListener: OnConsentGatheringCompleteListener,
     ) {
-        // For testing purposes, you can force a DebugGeography of EEA or NOT_EEA.
-        val debugSettings =
-            ConsentDebugSettings.Builder(activity)
-                // .setDebugGeography(ConsentDebugSettings.DebugGeography.DEBUG_GEOGRAPHY_EEA)
+        val paramsBuilder = ConsentRequestParameters.Builder()
+        if (BuildConfig.DEBUG) {
+            val debugSettings = ConsentDebugSettings.Builder(activity)
                 .addTestDeviceHashedId(AdMobManager.TEST_DEVICE_HASHED_ID)
                 .build()
+            paramsBuilder.setConsentDebugSettings(debugSettings)
+        }
+        val params = paramsBuilder.build()
 
-        val params = ConsentRequestParameters.Builder().setConsentDebugSettings(debugSettings).build()
+        OzEventLogger.logConsentCheckStart(activity)
 
-        // [START request_consent_info_update]
-        // Requesting an update to consent information should be called on every app launch.
+        // Request updated consent information on each app launch
         consentInformation.requestConsentInfoUpdate(
             activity,
             params,
             {
-                // Called when consent information is successfully updated.
-                // [START_EXCLUDE silent]
+                OzEventLogger.logConsentCheckSuccess(activity)
                 loadAndShowConsentFormIfRequired(activity, onConsentGatheringCompleteListener)
-                // [END_EXCLUDE]
             },
             { requestConsentError ->
-                // Called when there's an error updating consent information.
-                // [START_EXCLUDE silent]
-                onConsentGatheringCompleteListener.consentGatheringComplete(requestConsentError)
-                // [END_EXCLUDE]
+                OzEventLogger.logConsentCheckFailed(
+                    activity,
+                    requestConsentError.errorCode,
+                    requestConsentError.message
+                )
+                // Attempt showing form if required despite update error, or finalize status
+                loadAndShowConsentFormIfRequired(activity, onConsentGatheringCompleteListener)
             },
         )
-        // [END request_consent_info_update]
     }
 
+    /**
+     * Loads and displays the UMP consent form if required by the current consent status.
+     */
     private fun loadAndShowConsentFormIfRequired(
         activity: Activity,
         onConsentGatheringCompleteListener: OnConsentGatheringCompleteListener,
     ) {
-        // [START load_and_show_consent_form]
-        UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { formError ->
-            // Consent gathering process is complete.
-            // [START_EXCLUDE silent]
-            onConsentGatheringCompleteListener.consentGatheringComplete(formError)
-            // [END_EXCLUDE]
+        // Capture whether a form will actually be shown BEFORE calling UMP.
+        // loadAndShowConsentFormIfRequired fires its callback immediately for non-EEA users
+        // (NOT_REQUIRED) and users with a cached decision (OBTAINED) without displaying
+        // any form. Logging form_show/form_closed for those cases inflates event counts.
+        val formWasShown = consentInformation.consentStatus == ConsentInformation.ConsentStatus.REQUIRED
+        if (formWasShown) {
+            OzEventLogger.logConsentFormShow(activity)
         }
-        // [END load_and_show_consent_form]
+
+        UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { formError ->
+            if (formWasShown) {
+                OzEventLogger.logConsentFormClosed(activity, formError?.message)
+            }
+            if (canRequestAds) {
+                OzEventLogger.logConsentAdsReady(activity)
+            } else {
+                OzEventLogger.logConsentAdsBlocked(activity, formError?.message)
+            }
+            onConsentGatheringCompleteListener.consentGatheringComplete(formError)
+        }
     }
 
-    /** Helper method to call the UMP SDK method to show the privacy options form. */
+    /**
+     * Presents the privacy options form allowing users to modify their consent choices at any time.
+     *
+     * @param activity The current [Activity].
+     * @param onConsentFormDismissedListener Callback triggered when the privacy form is dismissed.
+     */
     fun showPrivacyOptionsForm(
         activity: Activity,
         onConsentFormDismissedListener: OnConsentFormDismissedListener,
     ) {
-        // [START present_privacy_options_form]
-        UserMessagingPlatform.showPrivacyOptionsForm(activity, onConsentFormDismissedListener)
-        // [END present_privacy_options_form]
+        OzEventLogger.logConsentFormShow(activity)
+        UserMessagingPlatform.showPrivacyOptionsForm(activity) { formError ->
+            OzEventLogger.logConsentFormClosed(activity, formError?.message)
+            onConsentFormDismissedListener.onConsentFormDismissed(formError)
+        }
     }
 
     companion object {
-        @Volatile private var instance: GoogleMobileAdsConsentManager? = null
+        @Volatile
+        private var instance: GoogleMobileAdsConsentManager? = null
 
-        fun getInstance(context: Context) =
-            instance
-                ?: synchronized(this) {
-                    instance ?: GoogleMobileAdsConsentManager(context).also { instance = it }
-                }
+        /**
+         * Returns the thread-safe singleton instance of [GoogleMobileAdsConsentManager].
+         *
+         * @param context Application or Activity context.
+         */
+        fun getInstance(context: Context): GoogleMobileAdsConsentManager =
+            instance ?: synchronized(this) {
+                instance ?: GoogleMobileAdsConsentManager(context.applicationContext).also { instance = it }
+            }
     }
 }

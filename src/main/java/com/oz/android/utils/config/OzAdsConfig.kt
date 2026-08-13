@@ -12,7 +12,9 @@ package com.oz.android.utils.config
 data class OzAdsConfig(
     val isAdEnabled: Boolean = false,
     val overlayAdGapTimeMs: Long = 30_000L,
+    val initTimeoutMs: Long = 5_000L,
     val testDeviceIds: List<String> = emptyList(),
     val isDebugMode: Boolean = false,
-    val offAdsOnPause: Boolean = true
+    val offAdsOnPause: Boolean = true,
+    val adsCoreType: AdsCoreType = AdsCoreType.ADMOB_NEXT_GEN
 )

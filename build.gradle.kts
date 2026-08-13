@@ -11,18 +11,38 @@ plugins {
     id("signing")
 }
 
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun getPublishProperty(name: String, defaultValue: String = ""): String {
+    return (localProperties.getProperty(name) ?: project.findProperty(name) as? String ?: defaultValue).trim()
+}
+
 android {
     namespace = "com.oz.android.ads_core"
     compileSdk {
-        version = release(36)
+        version = release(37)
     }
 
     defaultConfig {
         minSdk = 24
-        targetSdk = 36
+
+        buildConfigField("String", "LIB_VERSION", "\"${getPublishProperty("PUBLISH_VERSION", "1.0.4")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+    }
+
+    lint {
+        targetSdk = 37
+    }
+
+    testOptions {
+        targetSdk = 37
     }
 
     buildTypes {
@@ -50,6 +70,8 @@ android {
         }
     }
 
+
+
     //noinspection UseTomlInstead
     dependencies {
         // AndroidX
@@ -65,8 +87,12 @@ android {
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
         // Google Play Services Ads + UMP
-        implementation("com.google.android.gms:play-services-ads:25.0.0")
-        implementation("com.google.android.ump:user-messaging-platform:4.0.0")
+        api("com.google.android.gms:play-services-ads:25.4.0")
+        api("com.google.android.ump:user-messaging-platform:4.0.0")
+        api("com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk:1.2.1") {
+            exclude(group = "com.google.android.gms", module = "play-services-ads-api")
+        }
+
 
         // Shimmer
         implementation("io.github.usefulness:shimmer-android-core:1.0.0")
@@ -89,22 +115,11 @@ android {
     }
 }
 
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) {
-        file.inputStream().use { load(it) }
-    }
-}
-
 localProperties.forEach { key, value ->
     val keyStr = key.toString()
     if (keyStr.startsWith("signing.")) {
         extra.set(keyStr, value.toString().trim())
     }
-}
-
-fun getPublishProperty(name: String, defaultValue: String = ""): String {
-    return (localProperties.getProperty(name) ?: project.findProperty(name) as? String ?: defaultValue).trim()
 }
 
 afterEvaluate {

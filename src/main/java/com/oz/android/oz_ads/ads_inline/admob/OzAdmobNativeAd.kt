@@ -2,9 +2,8 @@ package com.oz.android.oz_ads.ads_inline.admob
 
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.LayoutInflater
-import com.google.android.gms.ads.nativead.NativeAdView
 import com.oz.android.ads_core.R
 import com.oz.android.utils.listener.OzAdListener
 import com.oz.android.ads_core.admobs.native_advanced.AdmobNativeAdvanced
@@ -19,6 +18,8 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : InlineAds<AdmobNativeAdvanced>(context, attrs, defStyleAttr) {
 
+    override val adFormat: String = "native"
+
     companion object {
         private const val TAG = "OzAdmobNativeAd"
     }
@@ -30,11 +31,11 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
 
     fun setMediaRatio(ratio: Int) {
         this.mediaAspectRatio = ratio
-        Log.d(TAG, "setMediaRatio: $ratio")
+        OzLog.d(TAG, "setMediaRatio: $ratio")
     }
 
-    // Map key -> NativeAdView
-    private val nativeAdViews = ConcurrentHashMap<String, NativeAdView>()
+    // Map key -> View
+    private val nativeAdViews = ConcurrentHashMap<String, android.view.View>()
 
     // Map key -> Layout ID
     private var layoutId = 0
@@ -47,17 +48,17 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
     fun setAdUnitId(key: String, adUnitId: String) {
         setPreloadKey(key)
         adUnitIds[key] = adUnitId
-        Log.d(TAG, "Ad unit ID set for key: $key -> $adUnitId")
+        OzLog.d(TAG, "Ad unit ID set for key: $key -> $adUnitId")
     }
 
     /**
      * Set NativeAdView for a key
      * @param key Key to identify the placement
-     * @param nativeAdView Pre-setup NativeAdView
+     * @param nativeAdView Pre-setup View
      */
-    fun setNativeAdView(key: String, nativeAdView: NativeAdView) {
+    fun setNativeAdView(key: String, nativeAdView: android.view.View) {
         nativeAdViews[key] = nativeAdView
-        Log.d(TAG, "NativeAdView set for key: $key")
+        OzLog.d(TAG, "NativeAdView set for key: $key")
     }
 
     /**
@@ -67,7 +68,7 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
      */
     fun setLayoutId(layoutId: Int) {
         this.layoutId = layoutId
-        Log.d(TAG, "Layout ID set: $layoutId")
+        OzLog.d(TAG, "Layout ID set: $layoutId")
     }
 
     /**
@@ -75,12 +76,12 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
      * @param key Key to identify the placement
      * @return Ad unit ID, null if not set yet
      */
-    fun getAdUnitId(key: String): String? = adUnitIds[key]
+    override fun getAdUnitId(key: String): String? = adUnitIds[key]
 
     override fun createAd(key: String): AdmobNativeAdvanced? {
         val adUnitId = adUnitIds[key]
         if (adUnitId.isNullOrBlank()) {
-            Log.e(TAG, "Ad unit ID not set for key: $key")
+            OzLog.e(TAG, "Ad unit ID not set for key: $key")
             return null
         }
 
@@ -90,23 +91,36 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
             }
 
             override fun onAdFailedToLoad(error: OzAdError) {
-                this@OzAdmobNativeAd.onAdLoadFailed(key, error.message)
+                this@OzAdmobNativeAd.onAdLoadFailed(key, error.message, error.code)
             }
 
             override fun onAdClicked() {
                 this@OzAdmobNativeAd.onAdClicked(key)
             }
+
+            override fun onAdImpression() {
+                // Update internal state to SHOWING and stop shimmer when AdMob confirms impression
+                this@OzAdmobNativeAd.onAdShown(key)
+            }
+
+            override fun onAdDismissedFullScreenContent() {
+                this@OzAdmobNativeAd.onAdDismissed(key)
+            }
+
+            override fun onAdFailedToShowFullScreenContent(adError: OzAdError) {
+                this@OzAdmobNativeAd.onAdShowFailed(key, adError.message, adError.code)
+            }
         }
 
         val mergedListener = nativeListener.merge(listener)
 
-        return AdmobNativeAdvanced(context, adUnitId, mergedListener).apply {
+        return AdmobNativeAdvanced.create(context, adUnitId, mergedListener).apply {
             this@OzAdmobNativeAd.mediaAspectRatio?.let { setMediaRatio(it) }
         }
     }
 
     override fun onLoadAd(key: String, ad: AdmobNativeAdvanced) {
-        Log.d(TAG, "Loading native ad for key: $key")
+        OzLog.d(TAG, "Loading native ad for key: $key")
         ad.load()
     }
 
@@ -137,7 +151,7 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
                         heightPx = view.measuredHeight
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to inflate layout for shimmer size: ${e.message}")
+                    OzLog.e(TAG, "Failed to inflate layout for shimmer size: ${e.message}")
                 }
             }
         }
@@ -156,61 +170,38 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
         // If no NativeAdView exists, check if layoutId is set
         if (nativeAdView == null) {
             val resId = layoutId
-            Log.d(TAG, "Inflating NativeAdView from layout ID: $resId")
+            OzLog.d(TAG, "Inflating native ad view from layout ID: $resId")
             try {
                 val inflatedView = LayoutInflater.from(context).inflate(resId, this, false)
-                if (inflatedView is NativeAdView) {
-                    nativeAdView = inflatedView
-                    bindStandardViews(nativeAdView)
-                    // Cache for subsequent uses
-                    nativeAdViews[key] = nativeAdView
-                } else {
-                    Log.e(TAG, "Inflated view is not a NativeAdView")
-                    onAdShowFailed(key, "Inflated view is not a NativeAdView")
-                    return
-                }
+                nativeAdView = inflatedView
+                // Cache for subsequent uses
+                nativeAdViews[key] = nativeAdView
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to inflate layout: ${e.message}")
+                OzLog.e(TAG, "Failed to inflate layout: ${e.message}")
                 onAdShowFailed(key, "Failed to inflate layout: ${e.message}")
                 return
             }
         }
 
-        Log.d(TAG, "Showing native ad for key: $key")
+        OzLog.d(TAG, "Showing native ad for key: $key")
         // Show native ad in this ViewGroup
         ad.show(this, nativeAdView)
-        // Notify parent that the ad has been shown
-        onAdShown(key)
-    }
-
-    /**
-     * Bind child views in NativeAdView based on standard IDs (compatible with layout_native_large.xml)
-     */
-    private fun bindStandardViews(nativeAdView: NativeAdView) {
-        nativeAdView.headlineView = nativeAdView.findViewById(R.id.ad_headline)
-        nativeAdView.bodyView = nativeAdView.findViewById(R.id.ad_body)
-        nativeAdView.callToActionView = nativeAdView.findViewById(R.id.ad_call_to_action)
-        nativeAdView.iconView = nativeAdView.findViewById(R.id.ad_app_icon)
-        nativeAdView.priceView = nativeAdView.findViewById(R.id.ad_price)
-        nativeAdView.starRatingView = nativeAdView.findViewById(R.id.ad_stars)
-        nativeAdView.storeView = nativeAdView.findViewById(R.id.ad_store)
-        nativeAdView.advertiserView = nativeAdView.findViewById(R.id.ad_advertiser)
-        nativeAdView.mediaView = nativeAdView.findViewById(R.id.ad_media)
+        // NOTE: onAdShown(key) is called from onAdImpression() when AdMob confirms visual impression
     }
 
     override fun hideAds() {
         removeAllViews()
-        Log.d(TAG, "Native ads hidden")
+        OzLog.d(TAG, "Native ads hidden")
     }
 
     override fun destroyAd(ad: AdmobNativeAdvanced) {
-        Log.d(TAG, "Destroying native ad")
+        OzLog.d(TAG, "Destroying native ad")
         ad.destroy()
     }
 
     override fun onPauseAd() {
         // Native ads generally don't need explicit pause handling
-        Log.d(TAG, "Pausing native ads (no-op)")
+        OzLog.d(TAG, "Pausing native ads (no-op)")
         if (OzAdsManager.getInstance().config.offAdsOnPause) {
             visibility = INVISIBLE
         }
@@ -218,7 +209,7 @@ open class OzAdmobNativeAd @JvmOverloads constructor(
 
     override fun onResumeAd() {
         // Native ads generally don't need explicit resume handling
-        Log.d(TAG, "Resuming native ads (no-op)")
+        OzLog.d(TAG, "Resuming native ads (no-op)")
         if (isAdEnable()) {
             visibility = VISIBLE
         } else {

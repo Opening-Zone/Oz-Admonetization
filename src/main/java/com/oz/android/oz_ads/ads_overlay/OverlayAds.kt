@@ -2,10 +2,11 @@ package com.oz.android.oz_ads.ads_overlay
 
 import com.oz.android.ads_core.R
 import android.app.Activity
+import android.os.Looper
 import android.app.Dialog
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
+import com.oz.android.utils.OzLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -31,7 +32,10 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
 
     companion object {
         private const val TAG = "AdsOverlayManager"
-        private val DEFAULT_TIME_GAP = if (BuildConfig.DEBUG) 30000L else 30000L
+        private val DEFAULT_TIME_GAP = 30000L
+
+        const val REASON_FULLSCREEN_BUSY = "fullscreen_busy"
+        const val REASON_COOLDOWN_ACTIVE = "cooldown_active"
 
         /**
          * Global storage for the last closed time.
@@ -82,7 +86,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
     private fun updateLastClosedTimeGlobal() {
         val now = System.currentTimeMillis()
         globalLastAdClosedTimes[getAdCategory()] = now
-        Log.d(TAG, "Updated global cooldown for [${getAdCategory()}]: $now")
+        OzLog.d(TAG, "Updated global cooldown for [${getAdCategory()}]: $now")
     }
 
     private fun setupLoadingIndicator() {
@@ -95,7 +99,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
                 loadingIndicator?.visibility = GONE
                 addView(loadingIndicator)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to inflate loading indicator layout: ${e.message}")
+                OzLog.e(TAG, "Failed to inflate loading indicator layout: ${e.message}")
             }
         }
     }
@@ -106,11 +110,11 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
      */
     fun setTimeGap(timeMillis: Long) {
         if (timeMillis < 0) {
-            Log.w(TAG, "Time gap cannot be negative. Ignoring.")
+            OzLog.w(TAG, "Time gap cannot be negative. Ignoring.")
             return
         }
         timeGap = timeMillis
-        Log.d(TAG, "Time gap set to: $timeMillis ms for instance of ${getAdCategory()}")
+        OzLog.d(TAG, "Time gap set to: $timeMillis ms for instance of ${getAdCategory()}")
     }
 
     /**
@@ -146,17 +150,17 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
      */
     override fun showAds(key: String) {
         if (!OzAdsManager.getInstance().canShowFullScreenAd()) {
-            Log.d(TAG, "Skipping showAds for key: $key. Another fullscreen ad is already showing.")
-            onAdShowFailed(key, "Another fullscreen ad is already showing.")
+            OzLog.d(TAG, "Skipping showAds for key: $key. Another fullscreen ad is already showing.")
+            onAdShowBlocked(key, REASON_FULLSCREEN_BUSY)
             return
         }
 
         if (!isTimeGapSatisfied()) {
             val remaining = getRemainingCooldownTime()
             val category = getAdCategory()
-            Log.d(TAG, "Skipping showAds ($category) for key: $key. Cooldown active. Remaining: ${remaining}ms")
+            OzLog.d(TAG, "Skipping showAds ($category) for key: $key. Cooldown active. Remaining: ${remaining}ms")
 
-            onAdShowFailed(key, "Time gap not satisfied. Wait ${remaining}ms")
+            onAdShowBlocked(key, REASON_COOLDOWN_ACTIVE)
             return
         }
         super.showAds(key)
@@ -169,11 +173,26 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
         super.onAdDismissed(key)
         updateLastClosedTimeGlobal()
         OzAdsManager.getInstance().onAdsFullScreenDismissed()
-        Log.d(TAG, "Ad dismissed for key: $key. Global timer updated for ${getAdCategory()}")
+        OzLog.d(TAG, "Ad dismissed for key: $key. Global timer updated for ${getAdCategory()}")
     }
 
     override fun hideAds() {
-        Log.d(TAG, "hideAds called - no-op for Overlay ads")
+        OzLog.d(TAG, "hideAds called - no-op for Overlay ads")
+    }
+
+    /**
+     * Override onAdShowBlocked to dismiss the loading indicator that may have been shown
+     * by loadThenShow() before the block occurred. The cached ad is preserved.
+     */
+    override fun onAdShowBlocked(key: String, reason: String?) {
+        super.onAdShowBlocked(key, reason)
+        hideLoading()
+    }
+
+    override fun onAdShowFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdShowFailed(key, message, errorCode)
+        hideLoading()
+        OzAdsManager.getInstance().onAdsFullScreenDismissed()
     }
 
     /**
@@ -186,17 +205,24 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
         } else {
             loadingIndicator?.visibility = VISIBLE
         }
-        Log.d(TAG, "Loading indicator shown")
+        OzLog.d(TAG, "Loading indicator shown")
     }
 
     /**
      * Hide loading indicator
      */
     fun hideLoading() {
-        loadingDialog?.dismiss()
-        loadingDialog = null
-        loadingIndicator?.visibility = GONE
-        Log.d(TAG, "Loading indicator hidden")
+        val action = Runnable {
+            loadingDialog?.dismiss()
+            loadingDialog = null
+            loadingIndicator?.visibility = GONE
+            OzLog.d(TAG, "Loading indicator hidden")
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action.run()
+        } else {
+            post(action)
+        }
     }
 
     private fun showLoadingDialog(activity: Activity) {
@@ -223,7 +249,7 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
             dialog.show()
             loadingDialog = dialog
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to show loading dialog: ${e.message}")
+            OzLog.e(TAG, "Failed to show loading dialog: ${e.message}")
         }
     }
 
@@ -248,8 +274,8 @@ abstract class OverlayAds<AdType> @JvmOverloads constructor(
         hideLoading()
     }
 
-    override fun onAdLoadFailed(key: String, message: String?) {
-        super.onAdLoadFailed(key, message)
+    override fun onAdLoadFailed(key: String, message: String?, errorCode: Int?) {
+        super.onAdLoadFailed(key, message, errorCode)
         hideLoading()
     }
 
