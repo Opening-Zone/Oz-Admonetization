@@ -50,8 +50,21 @@ jobs:
       - name: Grant Execute Permission to Gradlew
         run: chmod +x gradlew
 
+      - name: Extract Tag Version
+        run: |
+          REF_NAME="${{ github.ref_name }}"
+          VERSION="${REF_NAME#v}"
+          if [ -n "$VERSION" ]; then
+            echo "PUBLISH_VERSION=$VERSION" >> $GITHUB_ENV
+          fi
+
       - name: Publish Bundle to registries
-        run: ./gradlew publish
+        run: |
+          if [ -n "$PUBLISH_VERSION" ]; then
+            ./gradlew publish -PPUBLISH_VERSION=$PUBLISH_VERSION
+          else
+            ./gradlew publish
+          fi
         env:
           ORG_GRADLE_PROJECT_PUBLISH_REPO_URL: "https://central.sonatype.com/api/v1/publisher/deployments"
           ORG_GRADLE_PROJECT_PUBLISH_REPO_USERNAME: ${{ secrets.PUBLISH_REPO_USERNAME }}
