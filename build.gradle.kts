@@ -31,7 +31,7 @@ android {
     defaultConfig {
         minSdk = 24
 
-        buildConfigField("String", "LIB_VERSION", "\"${getPublishProperty("PUBLISH_VERSION", "1.0.4")}\"")
+        buildConfigField("String", "LIB_VERSION", "\"${getPublishProperty("PUBLISH_VERSION", "1.0.5")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
