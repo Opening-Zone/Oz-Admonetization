@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reserved Firebase Names (`FIX-05`)**: Removed manual `ad_click` logging (Firebase reserved name) in favor of `ad_clicked_custom`.
 - **Manifest App ID Validation (`REM-08`)**: Removed silent fallback to public test App ID on release builds. Throws descriptive error in DEBUG and returns failure result in release.
 - **Restored `show_blocked` Tracking (`REG-01`)**: Restored `logAdSkip` when fullscreen ads are blocked due to active cooldown or ongoing fullscreen ads. Normalized reasons to `fullscreen_busy` and `cooldown_active`.
-- **Duplicate Revenue Events (`REM-04`)**: Removed duplicate `app_event_impression` event in favor of standardized `ad_revenue_paid`.
+- **Duplicate Revenue Events (`REM-04`)**: Removed duplicate/custom `app_event_impression` event in favor of standardized `ad_impression` (`FirebaseAnalytics.Event.AD_IMPRESSION`).
 
 ### Changed
 - **Renamed Event (`REM-05`)**: Renamed `ad_opportunity` to `ad_load_attempt` to accurately reflect load request intent. Marked `logAdOpportunity` as `@Deprecated`.

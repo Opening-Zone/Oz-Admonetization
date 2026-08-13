@@ -258,14 +258,14 @@ object OzEventLogger {
         logSimpleEvent(context, "ad_show_called", buildAdParams(adUnitId, adFormat, key))
     }
 
-    @Deprecated("Removed — use ad_show_called + ad_revenue_paid / ad_impression instead")
+    @Deprecated("Removed — use ad_show_called + ad_impression instead")
     fun logAdShowSuccess(
         context: Context,
         adUnitId: String? = null,
         adFormat: String? = null,
         key: String? = null
     ) {
-        // ad_show_success is removed — ad_revenue_paid tracks impressions
+        // ad_show_success is removed — ad_impression tracks impressions
     }
 
     fun logAdShowFailed(
@@ -367,7 +367,7 @@ object OzEventLogger {
                 putString(FirebaseAnalytics.Param.AD_PLATFORM, "AdMob")
                 putInt("precision", precision)
             }
-            firebaseAnalytics.logEvent("ad_revenue_paid", revenueParams)
+            firebaseAnalytics.logEvent(FirebaseAnalytics.Event.AD_IMPRESSION, revenueParams)
         } catch (e: Exception) {
             OzLog.e(TAG, "Error logging paid ad impression event", e)
         }
